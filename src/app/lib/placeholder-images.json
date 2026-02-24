@@ -26,6 +26,12 @@
       "imageHint": "success vision"
     },
     {
+      "id": "form-header",
+      "description": "Background image for the prospect data form",
+      "imageUrl": "https://picsum.photos/seed/formbg/800/400",
+      "imageHint": "customer support"
+    },
+    {
       "id": "qr-rep-1",
       "description": "QR Code for Sales Rep 1",
       "imageUrl": "https://picsum.photos/seed/qr1/400/400",

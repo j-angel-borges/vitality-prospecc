@@ -1,6 +1,7 @@
 
 "use client"
 
+import Image from "next/image"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -23,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { LeadData } from "@/app/actions/leads"
+import { PlaceHolderImages } from "@/lib/placeholder-images"
 
 const formSchema = z.object({
   fullName: z.string().min(3, "Nombre es muy corto"),
@@ -38,6 +40,8 @@ interface FormSlideProps {
 }
 
 export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
+  const formHeaderImage = PlaceHolderImages.find(img => img.id === "form-header")
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -55,9 +59,22 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
 
   return (
     <div className="flex flex-col h-full bg-white animate-in fade-in slide-in-from-right-4 duration-300">
-      <div className="bg-primary p-6 text-white shrink-0">
-        <h2 className="text-2xl font-bold">Datos del Prospecto</h2>
-        <p className="text-primary-foreground/80">Completa la información básica</p>
+      <div className="relative h-48 flex flex-col justify-end p-6 text-white shrink-0 overflow-hidden">
+        {formHeaderImage && (
+          <Image
+            src={formHeaderImage.imageUrl}
+            alt={formHeaderImage.description}
+            fill
+            className="object-cover"
+            priority
+            data-ai-hint={formHeaderImage.imageHint}
+          />
+        )}
+        <div className="absolute inset-0 bg-primary/75" />
+        <div className="relative z-10">
+          <h2 className="text-3xl font-bold">Datos del Prospecto</h2>
+          <p className="text-primary-foreground/90 text-lg">Completa la información básica</p>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
@@ -68,9 +85,9 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
               name="fullName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nombre Completo</FormLabel>
+                  <FormLabel className="text-base font-semibold">Nombre Completo</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej. Juan Pérez" {...field} className="h-12" />
+                    <Input placeholder="Ej. Juan Pérez" {...field} className="h-14 text-lg bg-muted/30" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -82,13 +99,13 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
               name="phoneNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Número de Celular</FormLabel>
+                  <FormLabel className="text-base font-semibold">Número de Celular</FormLabel>
                   <FormControl>
                     <Input 
                       type="tel" 
                       placeholder="987 654 321" 
                       {...field} 
-                      className="h-12" 
+                      className="h-14 text-lg bg-muted/30" 
                     />
                   </FormControl>
                   <FormMessage />
@@ -101,9 +118,9 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
               name="district"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Distrito</FormLabel>
+                  <FormLabel className="text-base font-semibold">Distrito</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej. Miraflores" {...field} className="h-12" />
+                    <Input placeholder="Ej. Miraflores" {...field} className="h-14 text-lg bg-muted/30" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -115,11 +132,11 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
               name="salesRep"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Vendedor / Encargado</FormLabel>
+                  <FormLabel className="text-base font-semibold">Vendedor / Encargado</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Seleccione un vendedor" />
+                      <SelectTrigger className="h-14 text-lg bg-muted/30">
+                        <SelectValue placeholder="Seleccione un encargado" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -132,10 +149,10 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
               )}
             />
 
-            <div className="pt-4">
+            <div className="pt-6">
               <Button 
                 type="submit" 
-                className="w-full bg-primary hover:bg-primary/90 text-white h-14 text-lg rounded-xl shadow-lg"
+                className="w-full bg-primary hover:bg-primary/90 text-white h-16 text-xl font-bold rounded-xl shadow-lg transition-all active:scale-95"
               >
                 Siguiente
               </Button>
