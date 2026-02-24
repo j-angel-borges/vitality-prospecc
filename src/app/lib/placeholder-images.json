@@ -1,0 +1,41 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "welcome-hero",
+      "description": "Welcome image for the lead prospecting app",
+      "imageUrl": "https://picsum.photos/seed/prospect1/800/450",
+      "imageHint": "business networking"
+    },
+    {
+      "id": "discovery-1",
+      "description": "First discovery slide image",
+      "imageUrl": "https://picsum.photos/seed/disc1/600/400",
+      "imageHint": "innovation growth"
+    },
+    {
+      "id": "discovery-2",
+      "description": "Second discovery slide image",
+      "imageUrl": "https://picsum.photos/seed/disc2/600/400",
+      "imageHint": "collaboration team"
+    },
+    {
+      "id": "discovery-3",
+      "description": "Third discovery slide image",
+      "imageUrl": "https://picsum.photos/seed/disc3/600/400",
+      "imageHint": "success vision"
+    },
+    {
+      "id": "qr-rep-1",
+      "description": "QR Code for Sales Rep 1",
+      "imageUrl": "https://picsum.photos/seed/qr1/400/400",
+      "imageHint": "qr code"
+    },
+    {
+      "id": "qr-rep-2",
+      "description": "QR Code for Sales Rep 2",
+      "imageUrl": "https://picsum.photos/seed/qr2/400/400",
+      "imageHint": "qr code"
+    }
+  ]
+}
