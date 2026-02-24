@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "Lead": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Lead",
+      "type": "object",
+      "description": "Represents a prospective client captured through the Lead Prospecting App, including contact details, survey responses, and internal notes.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Lead entity."
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The full name of the prospect."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The cellphone number of the prospect."
+        },
+        "district": {
+          "type": "string",
+          "description": "The district where the prospect resides."
+        },
+        "salesRep": {
+          "type": "string",
+          "description": "The name of the sales representative handling this lead."
+        },
+        "healthScore": {
+          "type": "number",
+          "description": "The prospect's self-assessed importance of health in their home, on a scale of 1 to 10."
+        },
+        "pollutionAwareness": {
+          "type": "string",
+          "description": "The prospect's response regarding their awareness of microplastic and heavy metal contamination in the kitchen."
+        },
+        "interestInDetection": {
+          "type": "boolean",
+          "description": "Indicates whether the prospect is interested in learning about ways to detect kitchen and food contamination."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Internal notes added by the sales representative about the prospect."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the lead record was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "phoneNumber",
+        "district",
+        "salesRep",
+        "healthScore",
+        "pollutionAwareness",
+        "interestInDetection",
+        "notes",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/leads/{leadId}",
+        "definition": {
+          "entityName": "Lead",
+          "schema": {
+            "$ref": "#/backend/entities/Lead"
+          },
+          "description": "Collection for storing all prospective client leads. Each document represents a single lead and includes contact information, the newly added survey responses (`healthScore`, `pollutionAwareness`, `interestInDetection`), internal notes, and a `createdAt` timestamp. Crucially, each document *will also include* a denormalized `salesRepUid` field (representing the Firebase `uid` of the creating sales rep), which is critical for enforcing ownership-based security rules (e.g., a sales rep can only access their own leads) and achieving Authorization Independence for robust security and debuggability. This supports efficient QAPs.",
+          "params": [
+            {
+              "name": "leadId",
+              "description": "The unique identifier for a specific lead document."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure for the ProspectFlow application centers around a single, top-level collection named `leads`. This flat collection will store all prospective client records, with each document representing a unique lead. This design choice adheres to the principle of **Structural Segregation**, ensuring that all documents within the `leads` collection share a uniform security posture and access requirements, which significantly simplifies the definition and debugging of security rules.\n\n**Authorization Independence (CRITICAL):** To fulfill the mandate of authorization independence and eliminate the need for costly and complex `get()` calls in Firestore security rules, each `Lead` document *must* include a denormalized field: `salesRepUid`. This field will store the `uid` of the Firebase authenticated sales representative who created that specific lead. While the provided `Lead` entity schema includes `salesRep` (a string name), the `salesRepUid` is essential for direct, atomic authorization checks against `request.auth.uid`. This design ensures that security rules can determine ownership (`request.auth.uid == resource.data.salesRepUid`) directly from the document itself, facilitating simpler, more robust, and easier-to-debug rule sets.\n\n**QAPs (Queryable Access Patterns):** This flat collection structure with denormalized ownership (`salesRepUid`) perfectly supports secure `list` operations (QAPs). Sales representatives can perform efficient client-side queries (e.g., `db.collection('leads').where('salesRepUid', '==', auth.currentUser.uid)`) that are enforced server-side by security rules. For broader access, such as an administrator viewing all leads, a dedicated collection for global roles (e.g., `/roles_admin/{uid}`) could be used. An `exists()` check in security rules on this role collection, in conjunction with the `salesRepUid` check, provides a clear and debuggable DBAC model without resorting to custom claims or complex data fetches. This approach ensures that rules are not used as filters and queries remain efficient and secure."
+  }
+}
