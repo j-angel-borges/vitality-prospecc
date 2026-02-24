@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -8,8 +7,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Loader2, Send } from "lucide-react"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-import { submitLead, LeadData } from "@/app/actions/leads"
+import { LeadData } from "@/app/actions/leads"
 import { useToast } from "@/hooks/use-toast"
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase"
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 
 interface ActionSlideProps {
   data: LeadData
@@ -20,24 +21,45 @@ interface ActionSlideProps {
 export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
+  const db = useFirestore()
+  const { user } = useUser()
 
   const qrImageId = data.salesRep === "Vendedor 1" ? "qr-rep-1" : "qr-rep-2"
   const qrImage = PlaceHolderImages.find(img => img.id === qrImageId)
 
   const handleFinish = async () => {
-    setIsSubmitting(true)
-    const result = await submitLead(data)
-    setIsSubmitting(false)
-
-    if (result.success) {
-      onSuccess()
-    } else {
+    if (!db || !user) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: result.error || "Ocurrió un error al guardar el prospecto.",
+        title: "Error de sesión",
+        description: "No se pudo identificar al representante. Por favor, reintente.",
       })
+      return
     }
+
+    setIsSubmitting(true)
+
+    const leadsRef = collection(db, "leads")
+    const payload = {
+      ...data,
+      salesRepUid: user.uid,
+      createdAt: serverTimestamp(),
+    }
+
+    addDoc(leadsRef, payload)
+      .then(() => {
+        setIsSubmitting(false)
+        onSuccess()
+      })
+      .catch(async (error) => {
+        setIsSubmitting(false)
+        const permissionError = new FirestorePermissionError({
+          path: leadsRef.path,
+          operation: 'create',
+          requestResourceData: payload,
+        })
+        errorEmitter.emit('permission-error', permissionError)
+      })
   }
 
   return (

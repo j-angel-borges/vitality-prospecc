@@ -1,102 +1,153 @@
-
 "use client"
 
 import * as React from "react"
 import { useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, ChevronLeft } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { ChevronLeft, ArrowRight } from "lucide-react"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
+import { LeadData } from "@/app/actions/leads"
+import { cn } from "@/lib/utils"
 
 interface DiscoverySlideProps {
+  data: LeadData
+  onUpdate: (data: Partial<LeadData>) => void
   onComplete: () => void
 }
 
-const discoverySteps = [
-  {
-    imageId: "discovery-1",
-    title: "Encuentra Prospectos",
-    description: "Identifica nuevas oportunidades de negocio en tiempo real."
-  },
-  {
-    imageId: "discovery-2",
-    title: "Conecta con Expertos",
-    description: "Nuestro equipo está listo para ayudarte a cerrar cada trato."
-  },
-  {
-    imageId: "discovery-3",
-    title: "Impulsa tu Crecimiento",
-    description: "Monitorea tus avances y alcanza tus metas comerciales."
-  }
-]
-
-export function DiscoverySlide({ onComplete }: DiscoverySlideProps) {
-  const [step, setStep] = useState(0)
+export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlideProps) {
+  const [subStep, setSubStep] = useState(0)
 
   const handleNext = () => {
-    if (step < discoverySteps.length - 1) {
-      setStep(step + 1)
+    if (subStep < 2) {
+      setSubStep(subStep + 1)
     } else {
       onComplete()
     }
   }
 
   const handleBack = () => {
-    if (step > 0) setStep(step - 1)
+    if (subStep > 0) setSubStep(subStep - 1)
   }
 
-  const currentData = discoverySteps[step]
-  const currentImage = PlaceHolderImages.find(img => img.id === currentData.imageId)
+  const handleScoreClick = (score: number) => {
+    onUpdate({ healthScore: score })
+    setSubStep(1)
+  }
+
+  const discoveryImages = [
+    PlaceHolderImages.find(img => img.id === "discovery-1"),
+    PlaceHolderImages.find(img => img.id === "discovery-2"),
+    PlaceHolderImages.find(img => img.id === "discovery-3"),
+  ]
 
   return (
-    <div className="flex flex-col h-full bg-white animate-in fade-in duration-300">
-      <div className="p-4 flex items-center">
-        {step > 0 && (
-          <Button variant="ghost" size="icon" onClick={handleBack} className="text-primary">
-            <ChevronLeft className="h-6 w-6" />
-          </Button>
-        )}
+    <div className="flex flex-col h-full bg-white animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="p-4 flex items-center shrink-0">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={handleBack} 
+          className={cn("text-primary", subStep === 0 && "invisible")}
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </Button>
         <div className="flex-1 text-center">
           <div className="flex justify-center gap-1.5">
-            {discoverySteps.map((_, i) => (
+            {[0, 1, 2].map((i) => (
               <div 
                 key={i} 
-                className={`h-1.5 rounded-full transition-all duration-300 ${i === step ? 'w-8 bg-primary' : 'w-2 bg-muted'}`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${i === subStep ? 'w-8 bg-primary' : 'w-2 bg-muted'}`}
               />
             ))}
           </div>
         </div>
+        <div className="w-10" /> {/* Spacer for symmetry */}
       </div>
 
-      <div className="flex-1 flex flex-col p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
         <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-md">
-          {currentImage && (
+          {discoveryImages[subStep] && (
             <Image
-              src={currentImage.imageUrl}
-              alt={currentImage.description}
+              src={discoveryImages[subStep]!.imageUrl}
+              alt={discoveryImages[subStep]!.description}
               fill
               className="object-cover"
-              data-ai-hint={currentImage.imageHint}
+              data-ai-hint={discoveryImages[subStep]!.imageHint}
             />
           )}
         </div>
 
-        <div className="text-center space-y-4 pt-4">
-          <h2 className="text-2xl font-bold text-primary">{currentData.title}</h2>
-          <p className="text-muted-foreground text-lg leading-relaxed">
-            {currentData.description}
-          </p>
-        </div>
-      </div>
+        <div className="space-y-6">
+          {subStep === 0 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              <h2 className="text-2xl font-bold text-primary text-center">
+                ¿Del 1 al 10 qué tan importante es la salud en su hogar?
+              </h2>
+              <div className="grid grid-cols-5 gap-3">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                  <Button
+                    key={num}
+                    onClick={() => handleScoreClick(num)}
+                    variant={data.healthScore === num ? "default" : "outline"}
+                    className={cn(
+                      "h-12 text-lg font-bold rounded-xl transition-all active:scale-90",
+                      data.healthScore === num ? "bg-primary text-white" : "border-primary text-primary hover:bg-primary/5"
+                    )}
+                  >
+                    {num}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
 
-      <div className="p-8">
-        <Button 
-          onClick={handleNext}
-          className="w-full bg-secondary hover:bg-secondary/90 text-white h-14 text-lg font-semibold rounded-xl flex items-center justify-center gap-2 group"
-        >
-          {step === discoverySteps.length - 1 ? "Entendido" : "Siguiente"}
-          <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-        </Button>
+          {subStep === 1 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              <h2 className="text-2xl font-bold text-primary text-center">
+                ¿Ha escuchado antes sobre la contaminación por microplásticos y metales pesados en la cocina?
+              </h2>
+              <Textarea
+                placeholder="Escriba su respuesta aquí..."
+                className="min-h-[120px] text-lg rounded-xl border-primary/20 focus:border-primary"
+                value={data.pollutionAwareness}
+                onChange={(e) => onUpdate({ pollutionAwareness: e.target.value })}
+              />
+              <Button 
+                onClick={handleNext}
+                disabled={!data.pollutionAwareness.trim()}
+                className="w-full bg-primary hover:bg-primary/90 text-white h-14 text-lg font-bold rounded-xl shadow-lg flex items-center justify-center gap-2"
+              >
+                Siguiente
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
+
+          {subStep === 2 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+              <h2 className="text-2xl font-bold text-primary text-center">
+                ¿Le interesaría saber cómo detectar la contaminación en su cocina y alimentos?
+              </h2>
+              <div className="flex flex-col gap-4">
+                <Button
+                  onClick={() => { onUpdate({ interestInDetection: true }); handleNext(); }}
+                  className="h-20 text-2xl font-bold rounded-2xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-xl transition-all active:scale-95"
+                >
+                  SÍ
+                </Button>
+                <Button
+                  onClick={() => { onUpdate({ interestInDetection: false }); handleNext(); }}
+                  variant="outline"
+                  className="h-20 text-2xl font-bold rounded-2xl border-2 border-primary text-primary hover:bg-primary/5 transition-all active:scale-95"
+                >
+                  NO
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
