@@ -63,11 +63,11 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
             ))}
           </div>
         </div>
-        <div className="w-10" /> {/* Spacer for symmetry */}
+        <div className="w-10" />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
-        <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-md">
+      <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6 max-w-4xl mx-auto w-full">
+        <div className="relative w-full aspect-video md:aspect-[21/9] rounded-2xl overflow-hidden shadow-md">
           {discoveryImages[subStep] && (
             <Image
               src={discoveryImages[subStep]!.imageUrl}
@@ -79,20 +79,20 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
           )}
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 md:space-y-10 py-4">
           {subStep === 0 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-2xl font-bold text-primary text-center">
+            <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4">
+              <h2 className="text-2xl md:text-4xl font-bold text-primary text-center">
                 ¿Del 1 al 10 qué tan importante es la salud en su hogar?
               </h2>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-5 md:grid-cols-10 gap-3">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                   <Button
                     key={num}
                     onClick={() => handleScoreClick(num)}
                     variant={data.healthScore === num ? "default" : "outline"}
                     className={cn(
-                      "h-12 text-lg font-bold rounded-xl transition-all active:scale-90",
+                      "h-14 md:h-20 text-lg md:text-2xl font-bold rounded-xl transition-all active:scale-90",
                       data.healthScore === num ? "bg-primary text-white" : "border-primary text-primary hover:bg-primary/5"
                     )}
                   >
@@ -104,43 +104,43 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
           )}
 
           {subStep === 1 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-2xl font-bold text-primary text-center">
+            <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 max-w-2xl mx-auto w-full">
+              <h2 className="text-2xl md:text-4xl font-bold text-primary text-center">
                 ¿Ha escuchado antes sobre la contaminación por microplásticos y metales pesados en la cocina?
               </h2>
               <Textarea
                 placeholder="Escriba su respuesta aquí..."
-                className="min-h-[120px] text-lg rounded-xl border-primary/20 focus:border-primary"
+                className="min-h-[150px] text-lg md:text-xl rounded-xl border-primary/20 focus:border-primary p-4"
                 value={data.pollutionAwareness}
                 onChange={(e) => onUpdate({ pollutionAwareness: e.target.value })}
               />
               <Button 
                 onClick={handleNext}
                 disabled={!data.pollutionAwareness.trim()}
-                className="w-full bg-primary hover:bg-primary/90 text-white h-14 text-lg font-bold rounded-xl shadow-lg flex items-center justify-center gap-2"
+                className="w-full bg-primary hover:bg-primary/90 text-white h-16 md:h-20 text-xl font-bold rounded-xl shadow-lg flex items-center justify-center gap-2"
               >
                 Siguiente
-                <ArrowRight className="h-5 w-5" />
+                <ArrowRight className="h-6 w-6" />
               </Button>
             </div>
           )}
 
           {subStep === 2 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-2xl font-bold text-primary text-center">
+            <div className="space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 max-w-2xl mx-auto w-full">
+              <h2 className="text-2xl md:text-4xl font-bold text-primary text-center">
                 ¿Le interesaría saber cómo detectar la contaminación en su cocina y alimentos?
               </h2>
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 md:gap-6">
                 <Button
                   onClick={() => { onUpdate({ interestInDetection: true }); handleNext(); }}
-                  className="h-20 text-2xl font-bold rounded-2xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-xl transition-all active:scale-95"
+                  className="h-24 md:h-32 text-3xl font-bold rounded-2xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-xl transition-all active:scale-95"
                 >
                   SÍ
                 </Button>
                 <Button
                   onClick={() => { onUpdate({ interestInDetection: false }); handleNext(); }}
                   variant="outline"
-                  className="h-20 text-2xl font-bold rounded-2xl border-2 border-primary text-primary hover:bg-primary/5 transition-all active:scale-95"
+                  className="h-24 md:h-32 text-3xl font-bold rounded-2xl border-2 border-primary text-primary hover:bg-primary/5 transition-all active:scale-95"
                 >
                   NO
                 </Button>
