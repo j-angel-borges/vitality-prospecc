@@ -1,3 +1,4 @@
+
 "use client"
 
 import Image from "next/image"
@@ -13,7 +14,7 @@ export function WelcomeSlide({ onStart }: WelcomeSlideProps) {
 
   return (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white">
-      <div className="relative w-full aspect-[4/3] md:aspect-video shrink-0">
+      <div className="relative w-full aspect-[4/3] shrink-0">
         {heroImage && (
           <Image
             src={heroImage.imageUrl}
@@ -26,18 +27,18 @@ export function WelcomeSlide({ onStart }: WelcomeSlideProps) {
         )}
       </div>
       
-      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 text-center space-y-6 md:space-y-10">
-        <h1 className="text-3xl md:text-5xl font-headline font-bold text-primary leading-tight px-2">
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8">
+        <h1 className="text-3xl font-headline font-bold text-primary leading-tight">
           Descubre una Experiencia Culinaria única en Perú
         </h1>
         
-        <div className="space-y-3 md:space-y-4">
-          <ul className="text-lg md:text-2xl text-muted-foreground font-medium space-y-2">
-            <li className="flex items-center justify-center gap-2">
+        <div className="space-y-4">
+          <ul className="text-xl text-muted-foreground font-medium space-y-3">
+            <li className="flex items-center justify-center gap-3">
               <span className="h-2 w-2 rounded-full bg-accent shrink-0" />
               Contaminación Cruzada.
             </li>
-            <li className="flex items-center justify-center gap-2">
+            <li className="flex items-center justify-center gap-3">
               <span className="h-2 w-2 rounded-full bg-accent shrink-0" />
               Alimentación Saludable.
             </li>
@@ -46,7 +47,7 @@ export function WelcomeSlide({ onStart }: WelcomeSlideProps) {
 
         <Button 
           onClick={onStart}
-          className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xl px-16 py-8 md:py-10 md:text-2xl rounded-full shadow-lg transition-transform active:scale-95 mt-4"
+          className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-xl px-12 py-8 rounded-full shadow-lg transition-transform active:scale-95 mt-4 w-full"
         >
           COMENZAR
         </Button>

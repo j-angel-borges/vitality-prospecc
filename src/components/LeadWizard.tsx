@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -54,7 +55,7 @@ export function LeadWizard() {
   }
 
   return (
-    <div className="flex flex-col h-svh w-full bg-background overflow-hidden">
+    <div className="flex flex-col h-svh w-full bg-white overflow-hidden relative">
       {currentStep === "welcome" && (
         <WelcomeSlide onStart={() => nextStep("discovery")} />
       )}
