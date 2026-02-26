@@ -43,15 +43,15 @@
       "imageHint": "happy family"
     },
     {
-      "id": "qr-rep-1",
-      "description": "QR Code for Sales Rep 1",
-      "imageUrl": "/fondos/qr-rep-1.png",
+      "id": "qr-jose-angel",
+      "description": "QR Code for Jose Angel",
+      "imageUrl": "/fondos/qr-jose-a.png",
       "imageHint": "qr code"
     },
     {
-      "id": "qr-rep-2",
-      "description": "QR Code for Sales Rep 2",
-      "imageUrl": "/fondos/qr-rep-2.png",
+      "id": "qr-ricfel",
+      "description": "QR Code for Ricfel",
+      "imageUrl": "/fondos/qr-ricfel.png",
       "imageHint": "qr code"
     }
   ]
