@@ -58,7 +58,7 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-500">
-      {/* Background Image with Overlay */}
+      {/* Background Image/GIF with 60% Blue Overlay */}
       {bgImage && (
         <>
           <Image
@@ -69,30 +69,30 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
             priority
             data-ai-hint={bgImage.imageHint}
           />
-          <div className="absolute inset-0 bg-primary/60 backdrop-blur-[1px]" />
+          <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px]" />
         </>
       )}
 
-      <div className="relative z-10 flex flex-col h-full">
-        <div className="p-8 md:p-16 text-white shrink-0">
-          <h2 className="text-4xl md:text-6xl font-bold mb-2 drop-shadow-md">Datos del Prospecto</h2>
-          <p className="text-white/80 text-xl md:text-3xl">Completa la información básica</p>
+      <div className="relative z-10 flex flex-col h-full items-center justify-center">
+        <div className="w-full max-w-5xl px-8 py-12 text-white text-center">
+          <h2 className="text-5xl md:text-8xl font-bold mb-4 drop-shadow-2xl">Datos del Prospecto</h2>
+          <p className="text-white/90 text-2xl md:text-4xl drop-shadow-lg">Completa la información básica</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 md:p-16">
+        <div className="w-full max-w-5xl px-8 pb-16">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 md:space-y-12 max-w-4xl mx-auto bg-white/90 p-8 md:p-12 rounded-3xl shadow-2xl">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 md:space-y-12 bg-white/95 p-10 md:p-20 rounded-[3rem] shadow-2xl backdrop-blur-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
                 <FormField
                   control={form.control}
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg md:text-xl font-semibold text-primary">Nombre Completo</FormLabel>
+                      <FormLabel className="text-xl md:text-3xl font-bold text-primary">Nombre Completo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. Juan Pérez" {...field} className="h-14 md:h-20 text-xl bg-white border-primary/20" />
+                        <Input placeholder="Ej. Juan Pérez" {...field} className="h-16 md:h-24 text-2xl md:text-3xl bg-white border-primary/20 rounded-2xl p-6" />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-lg md:text-xl" />
                     </FormItem>
                   )}
                 />
@@ -102,16 +102,16 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="phoneNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg md:text-xl font-semibold text-primary">Número de Celular</FormLabel>
+                      <FormLabel className="text-xl md:text-3xl font-bold text-primary">Número de Celular</FormLabel>
                       <FormControl>
                         <Input 
                           type="tel" 
                           placeholder="987 654 321" 
                           {...field} 
-                          className="h-14 md:h-20 text-xl bg-white border-primary/20" 
+                          className="h-16 md:h-24 text-2xl md:text-3xl bg-white border-primary/20 rounded-2xl p-6" 
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-lg md:text-xl" />
                     </FormItem>
                   )}
                 />
@@ -121,11 +121,11 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="district"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg md:text-xl font-semibold text-primary">Distrito</FormLabel>
+                      <FormLabel className="text-xl md:text-3xl font-bold text-primary">Distrito</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. Miraflores" {...field} className="h-14 md:h-20 text-xl bg-white border-primary/20" />
+                        <Input placeholder="Ej. Miraflores" {...field} className="h-16 md:h-24 text-2xl md:text-3xl bg-white border-primary/20 rounded-2xl p-6" />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-lg md:text-xl" />
                     </FormItem>
                   )}
                 />
@@ -135,19 +135,19 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="salesRep"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg md:text-xl font-semibold text-primary">Vendedor / Encargado</FormLabel>
+                      <FormLabel className="text-xl md:text-3xl font-bold text-primary">Vendedor / Encargado</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-14 md:h-20 text-xl bg-white border-primary/20">
+                          <SelectTrigger className="h-16 md:h-24 text-2xl md:text-3xl bg-white border-primary/20 rounded-2xl px-6">
                             <SelectValue placeholder="Seleccione un encargado" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Vendedor 1">Vendedor 1</SelectItem>
-                          <SelectItem value="Vendedor 2">Vendedor 2</SelectItem>
+                          <SelectItem value="Vendedor 1" className="text-xl md:text-2xl p-4">Vendedor 1</SelectItem>
+                          <SelectItem value="Vendedor 2" className="text-xl md:text-2xl p-4">Vendedor 2</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-lg md:text-xl" />
                     </FormItem>
                   )}
                 />
@@ -156,9 +156,9 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
               <div className="pt-8">
                 <Button 
                   type="submit" 
-                  className="w-full bg-primary hover:bg-primary/90 text-white h-16 md:h-24 text-2xl font-bold rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95"
+                  className="w-full bg-primary hover:bg-primary/90 text-white h-20 md:h-32 text-3xl md:text-4xl font-bold rounded-[2rem] shadow-xl transition-all hover:scale-[1.02] active:scale-95"
                 >
-                  Siguiente
+                  SIGUIENTE
                 </Button>
               </div>
             </form>

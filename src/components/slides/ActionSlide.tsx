@@ -66,7 +66,7 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-500">
-      {/* Background Image with Overlay */}
+      {/* Background Image/GIF with 60% Blue Overlay */}
       {bgImage && (
         <>
           <Image
@@ -77,43 +77,43 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
             priority
             data-ai-hint={bgImage.imageHint}
           />
-          <div className="absolute inset-0 bg-primary/60 backdrop-blur-[1px]" />
+          <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px]" />
         </>
       )}
 
       <div className="relative z-10 flex flex-col h-full">
-        <div className="p-8 md:p-16 text-white shrink-0">
-          <h2 className="text-4xl md:text-6xl font-bold drop-shadow-md">Acción Final</h2>
-          <p className="text-white/80 text-xl md:text-3xl">Encargado: {data.salesRep}</p>
+        <div className="p-10 md:p-20 text-white text-center shrink-0">
+          <h2 className="text-5xl md:text-8xl font-bold drop-shadow-2xl">Acción Final</h2>
+          <p className="text-white/90 text-3xl md:text-5xl drop-shadow-lg">Encargado: {data.salesRep}</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 md:p-16 space-y-12">
-          <div className="bg-white/90 p-10 rounded-3xl shadow-2xl max-w-3xl mx-auto space-y-10">
-            <div className="flex flex-col items-center space-y-6">
-              <div className="relative w-56 h-56 md:w-72 md:h-72 border-8 border-primary rounded-3xl overflow-hidden p-4 bg-white shadow-xl">
+        <div className="flex-1 overflow-y-auto p-10 md:p-20 space-y-12 flex items-center justify-center">
+          <div className="bg-white/95 p-12 md:p-20 rounded-[3rem] shadow-2xl max-w-5xl w-full space-y-12 backdrop-blur-sm">
+            <div className="flex flex-col items-center space-y-8">
+              <div className="relative w-64 h-64 md:w-[500px] md:h-[500px] border-8 border-primary rounded-[3rem] overflow-hidden p-6 bg-white shadow-2xl transition-transform hover:scale-105">
                 {qrImage && (
                   <Image
                     src={qrImage.imageUrl}
                     alt={`QR Code for ${data.salesRep}`}
                     fill
-                    className="object-contain p-4"
+                    className="object-contain p-8"
                     data-ai-hint={qrImage.imageHint}
                   />
                 )}
               </div>
-              <p className="text-center font-bold text-primary text-2xl">
+              <p className="text-center font-bold text-primary text-3xl md:text-5xl">
                 Escanea para agregarme a contactos
               </p>
             </div>
 
-            <div className="space-y-4">
-              <Label htmlFor="notes" className="text-2xl font-bold text-primary">
+            <div className="space-y-6">
+              <Label htmlFor="notes" className="text-3xl md:text-5xl font-bold text-primary block">
                 Notas Internas
               </Label>
               <Textarea
                 id="notes"
                 placeholder="Escribe detalles importantes sobre este prospecto..."
-                className="min-h-[200px] text-xl p-6 bg-white border-primary/20 rounded-2xl"
+                className="min-h-[250px] md:min-h-[400px] text-2xl md:text-4xl p-10 bg-white border-primary/20 rounded-3xl shadow-inner focus:border-accent"
                 value={data.notes}
                 onChange={(e) => onUpdate({ notes: e.target.value })}
               />
@@ -121,17 +121,17 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
           </div>
         </div>
 
-        <div className="p-8 md:p-16">
+        <div className="p-10 md:p-20">
           <Button
             onClick={handleFinish}
             disabled={isSubmitting}
-            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-20 md:h-28 text-3xl font-bold rounded-2xl shadow-2xl flex items-center justify-center gap-4 transition-all hover:scale-105 active:scale-95"
+            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-28 md:h-48 text-4xl md:text-6xl font-bold rounded-[3rem] shadow-2xl flex items-center justify-center gap-6 transition-all hover:scale-105 active:scale-95"
           >
             {isSubmitting ? (
-              <Loader2 className="h-10 w-10 animate-spin" />
+              <Loader2 className="h-16 w-16 md:h-24 md:w-24 animate-spin" />
             ) : (
               <>
-                <Send className="h-10 w-10" />
+                <Send className="h-16 w-16 md:h-24 md:w-24" />
                 FINALIZAR Y ENVIAR
               </>
             )}

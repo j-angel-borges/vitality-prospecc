@@ -45,7 +45,7 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-500">
-      {/* Background Image with Overlay */}
+      {/* Background Image/GIF with 60% Blue Overlay */}
       {bgImages[subStep] && (
         <>
           <Image
@@ -55,53 +55,53 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
             className="object-cover transition-opacity duration-1000"
             data-ai-hint={bgImages[subStep]!.imageHint}
           />
-          <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-primary/60 backdrop-blur-[3px]" />
         </>
       )}
 
       {/* Navigation Header */}
-      <div className="relative z-20 p-6 flex items-center shrink-0">
+      <div className="relative z-20 p-8 flex items-center shrink-0">
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={handleBack} 
-          className={cn("text-white hover:bg-white/20", subStep === 0 && "invisible")}
+          className={cn("text-white hover:bg-white/20 h-12 w-12", subStep === 0 && "invisible")}
         >
-          <ChevronLeft className="h-8 w-8" />
+          <ChevronLeft className="h-10 w-10" />
         </Button>
         <div className="flex-1 text-center">
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center gap-3">
             {[0, 1, 2].map((i) => (
               <div 
                 key={i} 
                 className={cn(
-                  "h-2 rounded-full transition-all duration-300",
-                  i === subStep ? 'w-10 bg-accent' : 'w-2 bg-white/40'
+                  "h-3 rounded-full transition-all duration-300 shadow-sm",
+                  i === subStep ? 'w-16 bg-accent' : 'w-3 bg-white/40'
                 )}
               />
             ))}
           </div>
         </div>
-        <div className="w-10" />
+        <div className="w-12" />
       </div>
 
-      <div className="relative z-10 flex-1 overflow-y-auto px-6 pb-12 flex items-center justify-center">
-        <div className="max-w-2xl w-full space-y-8 md:space-y-12">
+      <div className="relative z-10 flex-1 overflow-y-auto px-8 pb-16 flex items-center justify-center">
+        <div className="max-w-5xl w-full space-y-12 md:space-y-20">
           {subStep === 0 && (
-            <div className="space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-8">
-              <h2 className="text-3xl md:text-5xl font-bold text-white text-center leading-tight drop-shadow-md">
+            <div className="space-y-12 md:space-y-20 animate-in fade-in slide-in-from-bottom-8">
+              <h2 className="text-4xl md:text-7xl font-bold text-white text-center leading-tight drop-shadow-2xl">
                 ¿Del 1 al 10 qué tan importante es la salud en su hogar?
               </h2>
-              <div className="grid grid-cols-5 md:grid-cols-10 gap-2 md:gap-4">
+              <div className="grid grid-cols-5 md:grid-cols-10 gap-3 md:gap-6">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                   <Button
                     key={num}
                     onClick={() => handleScoreClick(num)}
                     variant={data.healthScore === num ? "default" : "outline"}
                     className={cn(
-                      "h-14 md:h-24 text-xl md:text-3xl font-bold rounded-2xl transition-all active:scale-90 border-2",
+                      "h-20 md:h-32 text-2xl md:text-4xl font-bold rounded-3xl transition-all active:scale-90 border-4",
                       data.healthScore === num 
-                        ? "bg-accent text-accent-foreground border-accent scale-110 shadow-xl" 
+                        ? "bg-accent text-accent-foreground border-accent scale-110 shadow-2xl" 
                         : "border-white/40 text-white hover:bg-white/20"
                     )}
                   >
@@ -113,43 +113,43 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
           )}
 
           {subStep === 1 && (
-            <div className="space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-8">
-              <h2 className="text-3xl md:text-5xl font-bold text-white text-center leading-tight drop-shadow-md">
+            <div className="space-y-12 md:space-y-20 animate-in fade-in slide-in-from-bottom-8">
+              <h2 className="text-4xl md:text-7xl font-bold text-white text-center leading-tight drop-shadow-2xl">
                 ¿Ha escuchado antes sobre la contaminación actual por microplásticos y metales pesados en la cocina?
               </h2>
               <Textarea
                 placeholder="Escriba su respuesta aquí..."
-                className="min-h-[180px] md:min-h-[250px] text-xl md:text-2xl rounded-2xl border-white/20 bg-white/10 text-white placeholder:text-white/40 focus:border-accent focus:ring-accent p-6"
+                className="min-h-[250px] md:min-h-[400px] text-2xl md:text-4xl rounded-3xl border-white/20 bg-white/10 text-white placeholder:text-white/40 focus:border-accent focus:ring-accent p-10 backdrop-blur-md shadow-inner"
                 value={data.pollutionAwareness}
                 onChange={(e) => onUpdate({ pollutionAwareness: e.target.value })}
               />
               <Button 
                 onClick={handleNext}
                 disabled={!data.pollutionAwareness.trim()}
-                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-16 md:h-24 text-2xl font-bold rounded-2xl shadow-2xl flex items-center justify-center gap-3"
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-20 md:h-32 text-3xl md:text-4xl font-bold rounded-3xl shadow-2xl flex items-center justify-center gap-4 transition-all hover:scale-105"
               >
                 Siguiente
-                <ArrowRight className="h-8 w-8" />
+                <ArrowRight className="h-10 w-10" />
               </Button>
             </div>
           )}
 
           {subStep === 2 && (
-            <div className="space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-8">
-              <h2 className="text-3xl md:text-5xl font-bold text-white text-center leading-tight drop-shadow-md">
+            <div className="space-y-12 md:space-y-20 animate-in fade-in slide-in-from-bottom-8">
+              <h2 className="text-4xl md:text-7xl font-bold text-white text-center leading-tight drop-shadow-2xl">
                 ¿Le interesaría saber cómo detectar la contaminación en su cocina y alimentos?
               </h2>
-              <div className="flex flex-col gap-6 md:gap-8">
+              <div className="flex flex-col gap-8 md:gap-12">
                 <Button
                   onClick={() => { onUpdate({ interestInDetection: true }); handleNext(); }}
-                  className="h-28 md:h-40 text-4xl font-bold rounded-3xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-2xl transition-all hover:scale-105 active:scale-95"
+                  className="h-32 md:h-56 text-5xl md:text-7xl font-bold rounded-[3rem] bg-accent hover:bg-accent/90 text-accent-foreground shadow-2xl transition-all hover:scale-105 active:scale-95"
                 >
                   SÍ
                 </Button>
                 <Button
                   onClick={() => { onUpdate({ interestInDetection: false }); handleNext(); }}
                   variant="outline"
-                  className="h-20 md:h-32 text-3xl font-bold rounded-3xl border-2 border-white/40 text-white hover:bg-white/20 transition-all active:scale-95"
+                  className="h-24 md:h-40 text-4xl md:text-6xl font-bold rounded-[3rem] border-4 border-white/40 text-white hover:bg-white/20 transition-all active:scale-95"
                 >
                   NO
                 </Button>
