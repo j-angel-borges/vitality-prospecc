@@ -2,34 +2,46 @@
 {
   "placeholderImages": [
     {
-      "id": "welcome-hero",
-      "description": "Welcome image for the lead prospecting app",
-      "imageUrl": "https://picsum.photos/seed/prospect1/800/450",
-      "imageHint": "business networking"
+      "id": "bg-welcome",
+      "description": "Background for welcome slide",
+      "imageUrl": "https://picsum.photos/seed/welcomebg/1080/1920",
+      "imageHint": "luxury kitchen"
     },
     {
-      "id": "discovery-1",
-      "description": "First discovery slide image",
-      "imageUrl": "https://picsum.photos/seed/disc1/600/400",
-      "imageHint": "innovation growth"
+      "id": "bg-discovery-1",
+      "description": "Background for discovery step 1",
+      "imageUrl": "https://picsum.photos/seed/discbg1/1080/1920",
+      "imageHint": "healthy food"
     },
     {
-      "id": "discovery-2",
-      "description": "Second discovery slide image",
-      "imageUrl": "https://picsum.photos/seed/disc2/600/400",
-      "imageHint": "collaboration team"
+      "id": "bg-discovery-2",
+      "description": "Background for discovery step 2",
+      "imageUrl": "https://picsum.photos/seed/discbg2/1080/1920",
+      "imageHint": "ocean plastic"
     },
     {
-      "id": "discovery-3",
-      "description": "Third discovery slide image",
-      "imageUrl": "https://picsum.photos/seed/disc3/600/400",
-      "imageHint": "success vision"
+      "id": "bg-discovery-3",
+      "description": "Background for discovery step 3",
+      "imageUrl": "https://picsum.photos/seed/discbg3/1080/1920",
+      "imageHint": "science lab"
     },
     {
-      "id": "form-header",
-      "description": "Background image for the prospect data form",
-      "imageUrl": "https://picsum.photos/seed/formbg/800/400",
-      "imageHint": "customer support"
+      "id": "bg-form",
+      "description": "Background for form slide",
+      "imageUrl": "https://picsum.photos/seed/formbg/1080/1920",
+      "imageHint": "modern interior"
+    },
+    {
+      "id": "bg-action",
+      "description": "Background for action slide",
+      "imageUrl": "https://picsum.photos/seed/actionbg/1080/1920",
+      "imageHint": "business professional"
+    },
+    {
+      "id": "bg-success",
+      "description": "Background for success slide",
+      "imageUrl": "https://picsum.photos/seed/successbg/1080/1920",
+      "imageHint": "happy family"
     },
     {
       "id": "qr-rep-1",

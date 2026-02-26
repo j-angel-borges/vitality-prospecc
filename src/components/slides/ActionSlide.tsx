@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -24,6 +25,7 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
   const db = useFirestore()
   const { user } = useUser()
 
+  const bgImage = PlaceHolderImages.find(img => img.id === "bg-action")
   const qrImageId = data.salesRep === "Vendedor 1" ? "qr-rep-1" : "qr-rep-2"
   const qrImage = PlaceHolderImages.find(img => img.id === qrImageId)
 
@@ -63,59 +65,78 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white animate-in fade-in slide-in-from-right-4 duration-300">
-      <div className="bg-primary p-6 text-white shrink-0">
-        <h2 className="text-2xl font-bold">Acción Final</h2>
-        <p className="text-primary-foreground/80">Encargado: {data.salesRep}</p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-6 space-y-8">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="relative w-48 h-48 border-4 border-primary rounded-xl overflow-hidden p-2 bg-white shadow-xl">
-            {qrImage && (
-              <Image
-                src={qrImage.imageUrl}
-                alt={`QR Code for ${data.salesRep}`}
-                fill
-                className="object-contain p-2"
-                data-ai-hint={qrImage.imageHint}
-              />
-            )}
-          </div>
-          <p className="text-center font-medium text-primary text-lg">
-            Escanea para agregarme a contactos
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="notes" className="text-lg font-semibold text-primary">
-            Notas Internas
-          </Label>
-          <Textarea
-            id="notes"
-            placeholder="Escribe detalles importantes sobre este prospecto..."
-            className="min-h-[150px] text-base"
-            value={data.notes}
-            onChange={(e) => onUpdate({ notes: e.target.value })}
+    <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-500">
+      {/* Background Image with Overlay */}
+      {bgImage && (
+        <>
+          <Image
+            src={bgImage.imageUrl}
+            alt={bgImage.description}
+            fill
+            className="object-cover"
+            priority
+            data-ai-hint={bgImage.imageHint}
           />
-        </div>
-      </div>
+          <div className="absolute inset-0 bg-primary/60 backdrop-blur-[1px]" />
+        </>
+      )}
 
-      <div className="p-6">
-        <Button
-          onClick={handleFinish}
-          disabled={isSubmitting}
-          className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-16 text-xl font-bold rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all active:scale-95"
-        >
-          {isSubmitting ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
-          ) : (
-            <>
-              <Send className="h-6 w-6" />
-              FINALIZAR Y ENVIAR
-            </>
-          )}
-        </Button>
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="p-8 md:p-16 text-white shrink-0">
+          <h2 className="text-4xl md:text-6xl font-bold drop-shadow-md">Acción Final</h2>
+          <p className="text-white/80 text-xl md:text-3xl">Encargado: {data.salesRep}</p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8 md:p-16 space-y-12">
+          <div className="bg-white/90 p-10 rounded-3xl shadow-2xl max-w-3xl mx-auto space-y-10">
+            <div className="flex flex-col items-center space-y-6">
+              <div className="relative w-56 h-56 md:w-72 md:h-72 border-8 border-primary rounded-3xl overflow-hidden p-4 bg-white shadow-xl">
+                {qrImage && (
+                  <Image
+                    src={qrImage.imageUrl}
+                    alt={`QR Code for ${data.salesRep}`}
+                    fill
+                    className="object-contain p-4"
+                    data-ai-hint={qrImage.imageHint}
+                  />
+                )}
+              </div>
+              <p className="text-center font-bold text-primary text-2xl">
+                Escanea para agregarme a contactos
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <Label htmlFor="notes" className="text-2xl font-bold text-primary">
+                Notas Internas
+              </Label>
+              <Textarea
+                id="notes"
+                placeholder="Escribe detalles importantes sobre este prospecto..."
+                className="min-h-[200px] text-xl p-6 bg-white border-primary/20 rounded-2xl"
+                value={data.notes}
+                onChange={(e) => onUpdate({ notes: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-8 md:p-16">
+          <Button
+            onClick={handleFinish}
+            disabled={isSubmitting}
+            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-20 md:h-28 text-3xl font-bold rounded-2xl shadow-2xl flex items-center justify-center gap-4 transition-all hover:scale-105 active:scale-95"
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-10 w-10 animate-spin" />
+            ) : (
+              <>
+                <Send className="h-10 w-10" />
+                FINALIZAR Y ENVIAR
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   )
