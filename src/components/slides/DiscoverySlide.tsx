@@ -43,20 +43,23 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
     PlaceHolderImages.find(img => img.id === "bg-discovery-3"),
   ]
 
+  const currentBg = bgImages[subStep]
+
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-500">
       {/* Background Image/GIF with 60% Blue Overlay */}
-      {bgImages[subStep] && (
-        <>
+      {currentBg && (
+        <div className="absolute inset-0 z-0">
           <Image
-            src={bgImages[subStep]!.imageUrl}
-            alt={bgImages[subStep]!.description}
+            src={currentBg.imageUrl}
+            alt={currentBg.description}
             fill
             className="object-cover transition-opacity duration-1000"
-            data-ai-hint={bgImages[subStep]!.imageHint}
+            priority
+            data-ai-hint={currentBg.imageHint}
           />
           <div className="absolute inset-0 bg-primary/60 backdrop-blur-[3px]" />
-        </>
+        </div>
       )}
 
       {/* Navigation Header */}
@@ -86,7 +89,7 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
       </div>
 
       <div className="relative z-10 flex-1 overflow-y-auto px-8 pb-16 flex items-center justify-center">
-        <div className="max-w-5xl w-full space-y-12 md:space-y-20">
+        <div className="max-w-5xl w-full">
           {subStep === 0 && (
             <div className="space-y-12 md:space-y-20 animate-in fade-in slide-in-from-bottom-8">
               <h2 className="text-4xl md:text-7xl font-bold text-white text-center leading-tight drop-shadow-2xl">

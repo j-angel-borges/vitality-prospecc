@@ -55,7 +55,7 @@ export function LeadWizard() {
   }
 
   return (
-    <div className="flex flex-col h-svh w-full bg-white overflow-hidden relative">
+    <div className="flex flex-col h-svh w-full bg-black overflow-hidden relative">
       {currentStep === "welcome" && (
         <WelcomeSlide onStart={() => nextStep("discovery")} />
       )}
