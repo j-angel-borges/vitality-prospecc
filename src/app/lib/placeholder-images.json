@@ -4,43 +4,43 @@
     {
       "id": "bg-welcome",
       "description": "Background for welcome slide",
-      "imageUrl": "/fondos/bg-welcome.gif",
+      "imageUrl": "/fondos/zoom-comida.gif",
       "imageHint": "luxury kitchen"
     },
     {
       "id": "bg-discovery-1",
       "description": "Background for discovery step 1",
-      "imageUrl": "/fondos/bg-discovery-1.gif",
+      "imageUrl": "/fondos/chocolatera.gif",
       "imageHint": "healthy food"
     },
     {
       "id": "bg-discovery-2",
       "description": "Background for discovery step 2",
-      "imageUrl": "/fondos/bg-discovery-2.gif",
+      "imageUrl": "/fondos/llama-gota.gif",
       "imageHint": "ocean plastic"
     },
     {
       "id": "bg-discovery-3",
       "description": "Background for discovery step 3",
-      "imageUrl": "/fondos/bg-discovery-3.gif",
+      "imageUrl": "/fondos/maxtractor.gif",
       "imageHint": "science lab"
     },
     {
       "id": "bg-form",
       "description": "Background for form slide",
-      "imageUrl": "/fondos/bg-form.gif",
+      "imageUrl": "/fondos/olla-logo.gif",
       "imageHint": "modern interior"
     },
     {
       "id": "bg-action",
       "description": "Background for action slide",
-      "imageUrl": "/fondos/bg-action.gif",
+      "imageUrl": "/fondos/power-blender.gif",
       "imageHint": "business professional"
     },
     {
       "id": "bg-success",
       "description": "Background for success slide",
-      "imageUrl": "/fondos/bg-success.gif",
+      "imageUrl": "/fondos/boton-power.gif",
       "imageHint": "happy family"
     },
     {
