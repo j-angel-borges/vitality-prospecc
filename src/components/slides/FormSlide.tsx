@@ -143,8 +143,8 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Vendedor 1" className="text-xl md:text-2xl p-4">Vendedor 1</SelectItem>
-                          <SelectItem value="Vendedor 2" className="text-xl md:text-2xl p-4">Vendedor 2</SelectItem>
+                          <SelectItem value="Jose Angel" className="text-xl md:text-2xl p-4">Jose Angel</SelectItem>
+                          <SelectItem value="Ricfel" className="text-xl md:text-2xl p-4">Ricfel</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage className="text-lg md:text-xl" />

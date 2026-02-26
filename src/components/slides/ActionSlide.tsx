@@ -26,7 +26,9 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
   const { user } = useUser()
 
   const bgImage = PlaceHolderImages.find(img => img.id === "bg-action")
-  const qrImageId = data.salesRep === "Vendedor 1" ? "qr-rep-1" : "qr-rep-2"
+  
+  // Logic to select the correct QR code based on the sales representative's name
+  const qrImageId = data.salesRep === "Jose Angel" ? "qr-jose-angel" : "qr-ricfel"
   const qrImage = PlaceHolderImages.find(img => img.id === qrImageId)
 
   const handleFinish = async () => {
