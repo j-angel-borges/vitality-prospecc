@@ -1,3 +1,58 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "bg-welcome",
+      "description": "Background for welcome slide",
+      "imageUrl": "https://images.unsplash.com/photo-1628745277862-bc0b2d68c50c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBraXRjaGVufGVufDB8fHx8MTc3MjA2NTAxMXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "luxury kitchen"
+    },
+    {
+      "id": "bg-discovery-1",
+      "description": "Background for discovery step 1",
+      "imageUrl": "https://images.unsplash.com/photo-1547592180-85f173990554?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxoZWFsdGh5JTIwZm9vZHxlbnwwfHx8fDE3NzIwMzY0NTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "healthy food"
+    },
+    {
+      "id": "bg-discovery-2",
+      "description": "Background for discovery step 2",
+      "imageUrl": "https://images.unsplash.com/photo-1719754519931-0e5763a44d36?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxvY2VhbiUyMHBsYXN0aWN8ZW58MHx8fHwxNzcyMDY1MDExfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "ocean plastic"
+    },
+    {
+      "id": "bg-discovery-3",
+      "description": "Background for discovery step 3",
+      "imageUrl": "https://images.unsplash.com/photo-1581093577421-f561a654a353?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxzY2llbmNlJTIwbGFifGVufDB8fHx8MTc3MTk4NjQyNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "science lab"
+    },
+    {
+      "id": "bg-form",
+      "description": "Background for form slide",
+      "imageUrl": "https://images.unsplash.com/photo-1724765440530-e3954ac2e61d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8bW9kZXJuJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzcyMDQzNzAxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "modern interior"
+    },
+    {
+      "id": "bg-action",
+      "description": "Background for action slide",
+      "imageUrl": "https://images.unsplash.com/photo-1560250097-0b93528c311a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxidXNpbmVzcyUyMHByb2Zlc3Npb25hbHxlbnwwfHx8fDE3NzIwMDQ4ODh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "business professional"
+    },
+    {
+      "id": "bg-success",
+      "description": "Background for success slide",
+      "imageUrl": "https://images.unsplash.com/photo-1542037104857-ffbb0b9155fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxoYXBweSUyMGZhbWlseXxlbnwwfHx8fDE3NzIwNTgwNzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "happy family"
+    },
+    {
+      "id": "qr-rep-1",
+      "description": "QR Code for Sales Rep 1",
+      "imageUrl": "https://images.unsplash.com/photo-1662383729882-e03ce8e00887?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxxciUyMGNvZGV8ZW58MHx8fHwxNzcxOTY2Nzg0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "qr code"
+    },
+    {
+      "id": "qr-rep-2",
+      "description": "QR Code for Sales Rep 2",
+      "imageUrl": "https://images.unsplash.com/photo-1550482781-48d477e61c72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxxciUyMGNvZGV8ZW58MHx8fHwxNzcxOTY2Nzg0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "qr code"
+    }
+  ]
 }

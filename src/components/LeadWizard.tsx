@@ -27,7 +27,6 @@ export function LeadWizard() {
     interestInDetection: false,
   })
 
-  // Ensure user is signed in anonymously to satisfy Firestore security rules
   useEffect(() => {
     if (auth && !auth.currentUser) {
       initiateAnonymousSignIn(auth)
