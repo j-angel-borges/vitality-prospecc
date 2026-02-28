@@ -3,8 +3,8 @@ import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'ProspectFlow | Lead Prospecting App',
-  description: 'Manage your leads and prospect data with ease.',
+  title: 'Experiencia Culinaria | Registro de Salud',
+  description: 'Descubre una alimentación saludable y libre de contaminación.',
 };
 
 export default function RootLayout({

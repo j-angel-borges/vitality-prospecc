@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -36,7 +35,7 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
       toast({
         variant: "destructive",
         title: "Error de sesión",
-        description: "No se pudo identificar al representante. Por favor, reintente.",
+        description: "No se pudo identificar al encargado. Por favor, reintente.",
       })
       return
     }
@@ -99,7 +98,7 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
                 {qrImage && (
                   <Image
                     src={qrImage.imageUrl}
-                    alt={`QR Code for ${data.salesRep}`}
+                    alt={`Código QR de ${data.salesRep}`}
                     fill
                     className="object-contain p-4 md:p-8"
                     data-ai-hint={qrImage.imageHint}
@@ -113,11 +112,11 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
 
             <div className="space-y-4 md:space-y-6">
               <Label htmlFor="notes" className="text-2xl md:text-3xl lg:text-5xl font-bold text-primary block">
-                Notas Internas
+                Notas Adicionales
               </Label>
               <Textarea
                 id="notes"
-                placeholder="Escribe detalles importantes sobre este prospecto..."
+                placeholder="Escribe detalles importantes aquí..."
                 className="min-h-[150px] md:min-h-[250px] lg:min-h-[350px] text-lg md:text-2xl lg:text-4xl p-6 md:p-10 bg-white border-primary/20 rounded-2xl md:rounded-3xl shadow-inner focus:border-accent"
                 value={data.notes}
                 onChange={(e) => onUpdate({ notes: e.target.value })}

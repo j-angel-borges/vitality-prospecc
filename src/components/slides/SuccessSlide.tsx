@@ -1,4 +1,3 @@
-
 "use client"
 
 import Image from "next/image"
@@ -40,7 +39,7 @@ export function SuccessSlide({ onReset }: SuccessSlideProps) {
             ¡Felicidades!
           </h1>
           <p className="text-2xl md:text-4xl text-white/90 font-medium leading-relaxed drop-shadow-md">
-            El prospecto ha sido registrado exitosamente en nuestro sistema.
+            Tu registro se ha completado exitosamente en nuestro sistema.
           </p>
         </div>
 
@@ -49,7 +48,7 @@ export function SuccessSlide({ onReset }: SuccessSlideProps) {
           className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-2xl md:text-3xl px-12 py-10 rounded-3xl shadow-2xl flex items-center gap-4 w-full max-w-md transition-all hover:scale-105 active:scale-95 mt-8"
         >
           <UserPlus className="h-8 w-8 md:h-10 md:h-10" />
-          NUEVO PROSPECTO
+          NUEVO REGISTRO
         </Button>
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import Image from "next/image"
@@ -77,8 +76,8 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
       <div className="relative z-10 flex-1 overflow-y-auto flex flex-col items-center">
         {/* Header Section */}
         <div className="w-full max-w-5xl px-6 py-10 md:py-16 text-white text-center shrink-0">
-          <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-4 drop-shadow-2xl">Datos del Prospecto</h2>
-          <p className="text-white/90 text-xl md:text-2xl lg:text-4xl drop-shadow-lg">Completa la información básica</p>
+          <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-4 drop-shadow-2xl">Información de Registro</h2>
+          <p className="text-white/90 text-xl md:text-2xl lg:text-4xl drop-shadow-lg">Completa tus datos de contacto</p>
         </div>
 
         {/* Form Container */}
@@ -138,7 +137,7 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="salesRep"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Vendedor / Encargado</FormLabel>
+                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Encargado</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-14 md:h-18 lg:h-24 text-lg md:text-2xl lg:text-3xl bg-white border-primary/20 rounded-xl md:rounded-2xl px-4 md:px-6">
