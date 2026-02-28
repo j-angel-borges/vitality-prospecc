@@ -60,7 +60,7 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
     <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-500">
       {/* Background Image/GIF with 60% Blue Overlay */}
       {bgImage && (
-        <>
+        <div className="absolute inset-0 z-0">
           <Image
             src={bgImage.imageUrl}
             alt={bgImage.description}
@@ -70,29 +70,32 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
             data-ai-hint={bgImage.imageHint}
           />
           <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px]" />
-        </>
+        </div>
       )}
 
-      <div className="relative z-10 flex flex-col h-full items-center justify-center">
-        <div className="w-full max-w-5xl px-8 py-12 text-white text-center">
-          <h2 className="text-5xl md:text-8xl font-bold mb-4 drop-shadow-2xl">Datos del Prospecto</h2>
-          <p className="text-white/90 text-2xl md:text-4xl drop-shadow-lg">Completa la información básica</p>
+      {/* Scrollable Content Area */}
+      <div className="relative z-10 flex-1 overflow-y-auto flex flex-col items-center">
+        {/* Header Section */}
+        <div className="w-full max-w-5xl px-6 py-10 md:py-16 text-white text-center shrink-0">
+          <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-4 drop-shadow-2xl">Datos del Prospecto</h2>
+          <p className="text-white/90 text-xl md:text-2xl lg:text-4xl drop-shadow-lg">Completa la información básica</p>
         </div>
 
-        <div className="w-full max-w-5xl px-8 pb-16">
+        {/* Form Container */}
+        <div className="w-full max-w-4xl px-6 pb-16">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 md:space-y-12 bg-white/95 p-10 md:p-20 rounded-[3rem] shadow-2xl backdrop-blur-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 md:space-y-10 bg-white/95 p-6 md:p-12 lg:p-20 rounded-3xl md:rounded-[3rem] shadow-2xl backdrop-blur-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 lg:gap-16">
                 <FormField
                   control={form.control}
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xl md:text-3xl font-bold text-primary">Nombre Completo</FormLabel>
+                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Nombre Completo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. Juan Pérez" {...field} className="h-16 md:h-24 text-2xl md:text-3xl bg-white border-primary/20 rounded-2xl p-6" />
+                        <Input placeholder="Ej. Juan Pérez" {...field} className="h-14 md:h-18 lg:h-24 text-lg md:text-2xl lg:text-3xl bg-white border-primary/20 rounded-xl md:rounded-2xl p-4 md:p-6" />
                       </FormControl>
-                      <FormMessage className="text-lg md:text-xl" />
+                      <FormMessage className="text-sm md:text-lg" />
                     </FormItem>
                   )}
                 />
@@ -102,16 +105,16 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="phoneNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xl md:text-3xl font-bold text-primary">Número de Celular</FormLabel>
+                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Número de Celular</FormLabel>
                       <FormControl>
                         <Input 
                           type="tel" 
                           placeholder="987 654 321" 
                           {...field} 
-                          className="h-16 md:h-24 text-2xl md:text-3xl bg-white border-primary/20 rounded-2xl p-6" 
+                          className="h-14 md:h-18 lg:h-24 text-lg md:text-2xl lg:text-3xl bg-white border-primary/20 rounded-xl md:rounded-2xl p-4 md:p-6" 
                         />
                       </FormControl>
-                      <FormMessage className="text-lg md:text-xl" />
+                      <FormMessage className="text-sm md:text-lg" />
                     </FormItem>
                   )}
                 />
@@ -121,11 +124,11 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="district"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xl md:text-3xl font-bold text-primary">Distrito</FormLabel>
+                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Distrito</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. Miraflores" {...field} className="h-16 md:h-24 text-2xl md:text-3xl bg-white border-primary/20 rounded-2xl p-6" />
+                        <Input placeholder="Ej. Miraflores" {...field} className="h-14 md:h-18 lg:h-24 text-lg md:text-2xl lg:text-3xl bg-white border-primary/20 rounded-xl md:rounded-2xl p-4 md:p-6" />
                       </FormControl>
-                      <FormMessage className="text-lg md:text-xl" />
+                      <FormMessage className="text-sm md:text-lg" />
                     </FormItem>
                   )}
                 />
@@ -135,28 +138,28 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="salesRep"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xl md:text-3xl font-bold text-primary">Vendedor / Encargado</FormLabel>
+                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Vendedor / Encargado</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-16 md:h-24 text-2xl md:text-3xl bg-white border-primary/20 rounded-2xl px-6">
+                          <SelectTrigger className="h-14 md:h-18 lg:h-24 text-lg md:text-2xl lg:text-3xl bg-white border-primary/20 rounded-xl md:rounded-2xl px-4 md:px-6">
                             <SelectValue placeholder="Seleccione un encargado" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Jose Angel" className="text-xl md:text-2xl p-4">Jose Angel</SelectItem>
-                          <SelectItem value="Ricfel" className="text-xl md:text-2xl p-4">Ricfel</SelectItem>
+                          <SelectItem value="Jose Angel" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Jose Angel</SelectItem>
+                          <SelectItem value="Ricfel" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Ricfel</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage className="text-lg md:text-xl" />
+                      <FormMessage className="text-sm md:text-lg" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="pt-8">
+              <div className="pt-6 md:pt-10">
                 <Button 
                   type="submit" 
-                  className="w-full bg-primary hover:bg-primary/90 text-white h-20 md:h-32 text-3xl md:text-4xl font-bold rounded-[2rem] shadow-xl transition-all hover:scale-[1.02] active:scale-95"
+                  className="w-full bg-primary hover:bg-primary/90 text-white h-16 md:h-24 lg:h-32 text-2xl md:text-3xl lg:text-4xl font-bold rounded-2xl md:rounded-[2rem] shadow-xl transition-all hover:scale-[1.02] active:scale-95"
                 >
                   SIGUIENTE
                 </Button>
