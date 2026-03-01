@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -73,15 +72,16 @@ export default function AdminPage() {
   const exportToCSV = () => {
     if (!leads) return
     
-    const headers = ["Fecha", "Nombre", "Celular", "Distrito", "Encargado", "Score Salud", "Notas"]
+    const headers = ["Fecha", "Nombre", "Celular", "Distrito", "Encargado", "Notas", "Pregunta Microplasticos", "Interes Deteccion"]
     const rows = leads.map(l => [
       l.createdAt?.seconds ? format(new Date(l.createdAt.seconds * 1000), "dd/MM/yyyy HH:mm") : "",
       l.fullName,
       l.phoneNumber,
       l.district,
       l.salesRep,
-      l.healthScore,
-      l.notes?.replace(/\n/g, " ") || ""
+      l.notes?.replace(/\n/g, " ") || "",
+      l.pollutionAwareness?.replace(/\n/g, " ") || "",
+      l.interestInDetection ? "SÍ" : "NO"
     ])
 
     const csvContent = [
@@ -153,7 +153,7 @@ export default function AdminPage() {
                   <TableHead className="font-bold">Celular</TableHead>
                   <TableHead className="font-bold">Distrito</TableHead>
                   <TableHead className="font-bold">Encargado</TableHead>
-                  <TableHead className="font-bold text-center">Score</TableHead>
+                  <TableHead className="font-bold">Notas</TableHead>
                   <TableHead className="font-bold text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -168,10 +168,8 @@ export default function AdminPage() {
                       <TableCell>{lead.phoneNumber}</TableCell>
                       <TableCell>{lead.district}</TableCell>
                       <TableCell>{lead.salesRep}</TableCell>
-                      <TableCell className="text-center">
-                        <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full font-bold text-xs ${lead.healthScore >= 8 ? 'bg-green-100 text-green-700' : lead.healthScore >= 5 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                          {lead.healthScore}
-                        </span>
+                      <TableCell className="max-w-[200px] truncate" title={lead.notes}>
+                        {lead.notes || "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
