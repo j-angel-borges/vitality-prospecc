@@ -1,13 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   useFirestore, 
   useCollection, 
   useMemoFirebase,
   updateDocumentNonBlocking,
-  deleteDocumentNonBlocking
+  deleteDocumentNonBlocking,
+  useAuth,
+  initiateAnonymousSignIn
 } from "@/firebase"
 import { collection, query, orderBy, doc } from "firebase/firestore"
 import { 
@@ -46,6 +48,14 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState("")
   
   const db = useFirestore()
+  const auth = useAuth()
+
+  // Asegurar que el administrador esté firmado para tener permisos de Firestore
+  useEffect(() => {
+    if (auth && !auth.currentUser) {
+      initiateAnonymousSignIn(auth)
+    }
+  }, [auth])
   
   const leadsQuery = useMemoFirebase(() => {
     if (!db) return null
@@ -55,7 +65,7 @@ export default function AdminPage() {
   const { data: leads, isLoading } = useCollection(leadsQuery)
 
   const handleDelete = (id: string) => {
-    if (!db || !confirm("¿Estás seguro de eliminar este registro?")) return
+    if (!db || !confirm("¿Estás seguro de eliminar este registro permanentemente?")) return
     const docRef = doc(db, "leads", id)
     deleteDocumentNonBlocking(docRef)
   }

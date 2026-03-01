@@ -14,34 +14,26 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     // --- Reglas para la colección 'leads' ---
     match /leads/{leadId} {
       
       // Permitimos lectura a cualquier usuario firmado para que el Panel Admin funcione
       allow list, get: if isSignedIn();
 
-      // La creación sigue requiriendo que se asigne el UID del usuario actual
-      allow create: if isSignedIn() 
-                    && request.resource.data.salesRepUid == request.auth.uid;
+      // La creación requiere que el usuario esté firmado
+      allow create: if isSignedIn();
 
       /**
-       * Para el prototipo y el panel administrativo solicitado:
-       * Permitimos actualizar y borrar si el usuario está firmado.
-       * Validamos que el 'salesRepUid' no sea modificado para mantener la integridad del registro original.
+       * Para el prototipo y el panel administrativo:
+       * Permitimos actualizar y borrar si el usuario está firmado,
+       * eliminando la restricción de salesRepUid para evitar errores de permisos en el Panel Admin.
        */
-      allow update: if isSignedIn()
-                    && request.resource.data.salesRepUid == resource.data.salesRepUid;
-
-      allow delete: if isSignedIn();
+      allow update, delete: if isSignedIn();
     }
 
     // Colección de metadatos para roles (opcional para escalar en el futuro)
     match /roles_admin/{uid} {
-      allow get: if isOwner(uid);
+      allow get: if isSignedIn() && request.auth.uid == uid;
       allow list, write: if false;
     }
   }
