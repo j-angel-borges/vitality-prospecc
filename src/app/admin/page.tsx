@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -34,7 +35,6 @@ import {
   Trash2, 
   Download, 
   ArrowLeft, 
-  Lock,
   Search,
   Loader2
 } from "lucide-react"
@@ -43,8 +43,6 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
 export default function AdminPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [password, setPassword] = useState("")
   const [editingLead, setEditingLead] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   
@@ -56,15 +54,6 @@ export default function AdminPage() {
   }, [db])
 
   const { data: leads, isLoading } = useCollection(leadsQuery)
-
-  const handleAuth = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (password === "admin123") {
-      setIsAuthenticated(true)
-    } else {
-      alert("Contraseña incorrecta")
-    }
-  }
 
   const handleDelete = (id: string) => {
     if (!db || !confirm("¿Estás seguro de eliminar este registro?")) return
@@ -116,38 +105,6 @@ export default function AdminPage() {
     l.phoneNumber?.includes(searchTerm) ||
     l.district?.toLowerCase().includes(searchTerm.toLowerCase())
   )
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-svh bg-background flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl space-y-6 animate-in fade-in zoom-in duration-300">
-          <div className="flex flex-col items-center space-y-2">
-            <div className="bg-accent/20 p-4 rounded-full">
-              <Lock className="h-10 w-10 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold text-primary">Acceso Administrativo</h1>
-            <p className="text-muted-foreground text-center">Ingresa la contraseña para gestionar los registros</p>
-          </div>
-          <form onSubmit={handleAuth} className="space-y-4">
-            <Input 
-              type="password" 
-              placeholder="Contraseña" 
-              className="h-14 text-lg"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoFocus
-            />
-            <Button type="submit" className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90">
-              ENTRAR
-            </Button>
-          </form>
-          <Link href="/" className="block text-center text-primary/60 hover:text-primary transition-colors text-sm">
-            Volver al inicio
-          </Link>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-svh bg-slate-50 flex flex-col">
