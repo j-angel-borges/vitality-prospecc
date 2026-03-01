@@ -37,15 +37,18 @@ import {
   Download, 
   ArrowLeft, 
   Search,
-  Loader2
+  Loader2,
+  AlertCircle
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminPage() {
   const [editingLead, setEditingLead] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const { toast } = useToast()
   
   const db = useFirestore()
   const auth = useAuth()
@@ -62,12 +65,21 @@ export default function AdminPage() {
     return query(collection(db, "leads"), orderBy("createdAt", "desc"))
   }, [db])
 
-  const { data: leads, isLoading } = useCollection(leadsQuery)
+  const { data: leads, isLoading, error } = useCollection(leadsQuery)
 
-  const handleDelete = (id: string) => {
-    if (!db || !confirm("¿Estás seguro de eliminar este registro permanentemente?")) return
-    const docRef = doc(db, "leads", id)
-    deleteDocumentNonBlocking(docRef)
+  const handleDelete = (id: string, name: string) => {
+    if (!db) return
+    
+    const confirmed = window.confirm(`¿Estás seguro de eliminar permanentemente el registro de "${name}"?`)
+    
+    if (confirmed) {
+      const docRef = doc(db, "leads", id)
+      deleteDocumentNonBlocking(docRef)
+      toast({
+        title: "Registro eliminado",
+        description: "El registro ha sido removido exitosamente.",
+      })
+    }
   }
 
   const handleUpdate = (e: React.FormEvent) => {
@@ -77,6 +89,10 @@ export default function AdminPage() {
     const { id, ...dataToUpdate } = editingLead
     updateDocumentNonBlocking(docRef, dataToUpdate)
     setEditingLead(null)
+    toast({
+      title: "Registro actualizado",
+      description: "Los cambios se han guardado correctamente.",
+    })
   }
 
   const exportToCSV = () => {
@@ -146,6 +162,16 @@ export default function AdminPage() {
         </div>
       </header>
 
+      {/* Error Alert */}
+      {error && (
+        <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 animate-in fade-in slide-in-from-top-2">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <p className="font-medium text-sm md:text-base">
+            Error de permisos: No tienes autorización para gestionar estos datos. Verifica tu conexión.
+          </p>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="flex-1 p-6 overflow-x-auto">
         <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
@@ -188,6 +214,7 @@ export default function AdminPage() {
                             size="icon" 
                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             onClick={() => setEditingLead(lead)}
+                            title="Editar"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -195,7 +222,8 @@ export default function AdminPage() {
                             variant="ghost" 
                             size="icon" 
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDelete(lead.id)}
+                            onClick={() => handleDelete(lead.id, lead.fullName)}
+                            title="Eliminar"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
