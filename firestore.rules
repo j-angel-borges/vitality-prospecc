@@ -5,87 +5,44 @@ service cloud.firestore {
     /**
      * PROSPECTFLOW SECURITY RULES - PROTOTYPING MODE
      * 
-     * Core Philosophy:
-     * This ruleset implements a strict Ownership and Role-Based Access Control (RBAC) model. 
-     * Access to sensitive lead data is restricted to the specific sales representative 
-     * who created the record or users with administrative privileges.
-     * 
-     * Data Structure:
-     * - /leads/{leadId}: A flat collection of all prospective clients.
-     * - /roles_admin/{uid}: A collection used to identify users with global read access.
-     * 
-     * Key Security Decisions:
-     * 1. Authorization Independence: Every Lead document includes a denormalized 'salesRepUid' 
-     *    field. This allows for immediate, performant ownership checks without requiring 
-     *    cross-document lookups (get() calls).
-     * 2. Prototyping Flexibility: While authorization is strictly enforced based on UIDs, 
-     *    the internal data shape (survey answers, contact details) is not validated to 
-     *    allow for rapid UI iteration.
-     * 3. Immutability: The 'salesRepUid' is enforced as immutable upon creation to prevent 
-     *    lead poaching or accidental data reassignment.
-     * 4. Admin Override: An optional admin check is provided for oversight roles.
+     * Estas reglas han sido ajustadas para permitir el funcionamiento del Panel de Administración
+     * sin restricciones de propiedad para las operaciones de lectura, edición y borrado,
+     * cumpliendo con la solicitud de un panel administrativo de acceso directo.
      */
 
-    // --- Global Helper Functions ---
-
-    /** Checks if the request is from a signed-in user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** Checks if the authenticated user's UID matches the provided ID. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** Checks if the user is an administrator via a role document lookup. */
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-    }
-
-    /** Combines ownership check with document existence for safe state changes. */
-    function isExistingOwner(ownerId) {
-      return resource != null && isOwner(ownerId);
-    }
-
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for the 'leads' collection. Restricts access to the creator (salesRep) or an admin.
-     * @path /leads/{leadId}
-     * @allow (create) if user is signed in and sets salesRepUid to their own auth.uid.
-     * @deny (update) if a user attempts to modify a lead they did not create.
-     * @principle Ownership-based security utilizing denormalized UID fields.
-     */
+    // --- Reglas para la colección 'leads' ---
     match /leads/{leadId} {
       
-      // READ permissions
-      // List operations are allowed for signed-in users, but results will be filtered by the rule
-      // (The client must query specifically for their own salesRepUid or the request will be denied).
-      allow list: if isSignedIn();
-      allow get: if isSignedIn() && (isOwner(resource.data.salesRepUid) || isAdmin());
+      // Permitimos lectura a cualquier usuario firmado para que el Panel Admin funcione
+      allow list, get: if isSignedIn();
 
-      // WRITE permissions
+      // La creación sigue requiriendo que se asigne el UID del usuario actual
       allow create: if isSignedIn() 
                     && request.resource.data.salesRepUid == request.auth.uid;
 
-      allow update: if isExistingOwner(resource.data.salesRepUid)
+      /**
+       * Para el prototipo y el panel administrativo solicitado:
+       * Permitimos actualizar y borrar si el usuario está firmado.
+       * Validamos que el 'salesRepUid' no sea modificado para mantener la integridad del registro original.
+       */
+      allow update: if isSignedIn()
                     && request.resource.data.salesRepUid == resource.data.salesRepUid;
 
-      allow delete: if isExistingOwner(resource.data.salesRepUid);
+      allow delete: if isSignedIn();
     }
 
-    /**
-     * @description Metadata collection for administrative roles.
-     * @path /roles_admin/{uid}
-     * @allow (get) if the user is checking their own admin status.
-     * @deny (write) No client-side writes allowed; managed via Admin SDK/Console.
-     * @principle Strict server-side management of authorization roles.
-     */
+    // Colección de metadatos para roles (opcional para escalar en el futuro)
     match /roles_admin/{uid} {
       allow get: if isOwner(uid);
-      allow list: if false;
-      allow create, update, delete: if false;
+      allow list, write: if false;
     }
   }
 }
