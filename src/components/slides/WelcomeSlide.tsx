@@ -1,9 +1,10 @@
-
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
+import { Lock } from "lucide-react"
 
 interface WelcomeSlideProps {
   onStart: () => void
@@ -14,6 +15,20 @@ export function WelcomeSlide({ onStart }: WelcomeSlideProps) {
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-700">
+      {/* Admin Button */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30">
+        <Link href="/admin">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="border-accent text-accent hover:bg-accent/10 bg-black/20 backdrop-blur-sm font-bold tracking-widest text-xs h-8 px-4 rounded-full transition-all"
+          >
+            <Lock className="h-3 w-3 mr-2" />
+            ADMIN
+          </Button>
+        </Link>
+      </div>
+
       {/* Background Image/GIF with 60% Blue Overlay */}
       {bgImage && (
         <>
