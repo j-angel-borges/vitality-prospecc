@@ -1,3 +1,4 @@
+
 "use client"
 
 import Image from "next/image"
@@ -57,7 +58,6 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-500">
-      {/* Background Image/GIF with 60% Blue Overlay */}
       {bgImage && (
         <div className="absolute inset-0 z-0">
           <Image
@@ -72,15 +72,12 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
         </div>
       )}
 
-      {/* Scrollable Content Area */}
       <div className="relative z-10 flex-1 overflow-y-auto flex flex-col items-center">
-        {/* Header Section */}
         <div className="w-full max-w-5xl px-6 py-10 md:py-16 text-white text-center shrink-0">
           <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-4 drop-shadow-2xl">Información de Registro</h2>
           <p className="text-white/90 text-xl md:text-2xl lg:text-4xl drop-shadow-lg">Completa tus datos de contacto</p>
         </div>
 
-        {/* Form Container */}
         <div className="w-full max-w-4xl px-6 pb-16">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 md:space-y-10 bg-white/95 p-6 md:p-12 lg:p-20 rounded-3xl md:rounded-[3rem] shadow-2xl backdrop-blur-sm">
@@ -147,6 +144,8 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                         <SelectContent>
                           <SelectItem value="Jose Angel" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Jose Angel</SelectItem>
                           <SelectItem value="Ricfel" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Ricfel</SelectItem>
+                          <SelectItem value="Faviana" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Faviana</SelectItem>
+                          <SelectItem value="Matías" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Matías</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage className="text-sm md:text-lg" />

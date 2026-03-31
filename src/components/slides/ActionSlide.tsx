@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -26,9 +27,18 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
 
   const bgImage = PlaceHolderImages.find(img => img.id === "bg-action")
   
-  // Logic to select the correct QR code based on the sales representative's name
-  const qrImageId = data.salesRep === "Jose Angel" ? "qr-jose-angel" : "qr-ricfel"
-  const qrImage = PlaceHolderImages.find(img => img.id === qrImageId)
+  // Logic to select the correct QR code mapping
+  const getQrId = (name: string) => {
+    switch(name) {
+      case "Jose Angel": return "qr-jose-angel";
+      case "Ricfel": return "qr-ricfel";
+      case "Faviana": return "qr-faviana";
+      case "Matías": return "qr-matias";
+      default: return "qr-jose-angel";
+    }
+  }
+
+  const qrImage = PlaceHolderImages.find(img => img.id === getQrId(data.salesRep))
 
   const handleFinish = async () => {
     if (!db || !user) {
@@ -67,7 +77,6 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-500">
-      {/* Background Image/GIF with 60% Blue Overlay */}
       {bgImage && (
         <div className="absolute inset-0 z-0">
           <Image
@@ -82,15 +91,12 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
         </div>
       )}
 
-      {/* Main Container - Using flex-1 to push footer button down if possible, but allowing scroll */}
       <div className="relative z-10 flex flex-col h-full">
-        {/* Header Section */}
         <div className="p-6 md:p-12 lg:p-16 text-white text-center shrink-0">
           <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold drop-shadow-2xl">Acción Final</h2>
           <p className="text-white/90 text-xl md:text-3xl lg:text-5xl drop-shadow-lg">Encargado: {data.salesRep}</p>
         </div>
 
-        {/* Scrollable Form Section */}
         <div className="flex-1 overflow-y-auto p-4 md:p-10 lg:p-20 flex flex-col items-center">
           <div className="bg-white/95 p-6 md:p-12 lg:p-20 rounded-3xl md:rounded-[3rem] shadow-2xl max-w-4xl w-full space-y-10 backdrop-blur-sm">
             <div className="flex flex-col items-center space-y-6 md:space-y-8">
@@ -125,7 +131,6 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
           </div>
         </div>
 
-        {/* Footer Button Section */}
         <div className="p-6 md:p-12 lg:p-16 shrink-0">
           <Button
             onClick={handleFinish}

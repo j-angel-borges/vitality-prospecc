@@ -54,6 +54,18 @@
       "description": "QR Code for Ricfel",
       "imageUrl": "/fondos/qr-ricfel.png",
       "imageHint": "qr code"
+    },
+    {
+      "id": "qr-faviana",
+      "description": "QR Code for Faviana",
+      "imageUrl": "/fondos/qr-faviana.png",
+      "imageHint": "qr code"
+    },
+    {
+      "id": "qr-matias",
+      "description": "QR Code for Matias",
+      "imageUrl": "/fondos/qr-matias.png",
+      "imageHint": "qr code"
     }
   ]
 }
