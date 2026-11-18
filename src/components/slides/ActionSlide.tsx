@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -55,8 +54,15 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
     const leadsRef = collection(db, "leads")
     const payload = {
       ...data,
+      nombreMadre: data.fullName,
+      celular: data.phoneNumber,
+      distrito: data.district,
+      observaciones: data.notes || '',
+      sheetTab: 'Prospecc',
+      estadoCrm: 'nuevo',
       salesRepUid: user.uid,
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     }
 
     addDoc(leadsRef, payload)
@@ -92,38 +98,38 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
       )}
 
       <div className="relative z-10 flex flex-col h-full">
-        <div className="p-6 md:p-12 lg:p-16 text-white text-center shrink-0">
-          <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold drop-shadow-2xl">Acción Final</h2>
-          <p className="text-white/90 text-xl md:text-3xl lg:text-5xl drop-shadow-lg">Encargado: {data.salesRep}</p>
+        <div className="p-4 sm:p-6 md:p-10 text-white text-center shrink-0">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold drop-shadow-2xl">Acción Final</h2>
+          <p className="text-white/90 text-sm sm:text-lg md:text-xl drop-shadow-lg">Encargado: {data.salesRep}</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-10 lg:p-20 flex flex-col items-center">
-          <div className="bg-white/95 p-6 md:p-12 lg:p-20 rounded-3xl md:rounded-[3rem] shadow-2xl max-w-4xl w-full space-y-10 backdrop-blur-sm">
-            <div className="flex flex-col items-center space-y-6 md:space-y-8">
-              <div className="relative w-48 h-48 md:w-64 md:h-64 lg:w-[400px] lg:h-[400px] border-4 md:border-8 border-primary rounded-2xl md:rounded-[3rem] overflow-hidden p-4 bg-white shadow-2xl transition-transform hover:scale-105">
+        <div className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col items-center justify-center">
+          <div className="bg-white/95 p-5 sm:p-8 md:p-10 rounded-2xl sm:rounded-3xl shadow-2xl max-w-xl w-full space-y-6 backdrop-blur-sm">
+            <div className="flex flex-col items-center space-y-3 sm:space-y-4">
+              <div className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 border-3 sm:border-4 border-primary rounded-2xl overflow-hidden p-2 sm:p-3 bg-white shadow-xl transition-transform hover:scale-105">
                 {qrImage && (
                   <Image
                     src={qrImage.imageUrl}
                     alt={`Código QR de ${data.salesRep}`}
                     fill
-                    className="object-contain p-4 md:p-8"
+                    className="object-contain p-2 sm:p-4"
                     data-ai-hint={qrImage.imageHint}
                   />
                 )}
               </div>
-              <p className="text-center font-bold text-primary text-xl md:text-3xl lg:text-5xl">
+              <p className="text-center font-bold text-primary text-base sm:text-lg md:text-xl">
                 Escanea para agregarme a contactos
               </p>
             </div>
 
-            <div className="space-y-4 md:space-y-6">
-              <Label htmlFor="notes" className="text-2xl md:text-3xl lg:text-5xl font-bold text-primary block">
+            <div className="space-y-2 sm:space-y-3">
+              <Label htmlFor="notes" className="text-sm sm:text-base md:text-lg font-bold text-primary block">
                 Notas Adicionales
               </Label>
               <Textarea
                 id="notes"
                 placeholder="Escribe detalles importantes aquí..."
-                className="min-h-[150px] md:min-h-[250px] lg:min-h-[350px] text-lg md:text-2xl lg:text-4xl p-6 md:p-10 bg-white border-primary/20 rounded-2xl md:rounded-3xl shadow-inner focus:border-accent"
+                className="min-h-[80px] sm:min-h-[110px] md:min-h-[140px] text-sm sm:text-base p-3 sm:p-4 bg-white border-primary/20 rounded-xl shadow-inner focus:border-accent"
                 value={data.notes}
                 onChange={(e) => onUpdate({ notes: e.target.value })}
               />
@@ -131,17 +137,17 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
           </div>
         </div>
 
-        <div className="p-6 md:p-12 lg:p-16 shrink-0">
+        <div className="p-4 sm:p-6 shrink-0 max-w-xl mx-auto w-full">
           <Button
             onClick={handleFinish}
             disabled={isSubmitting}
-            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-16 md:h-28 lg:h-44 text-2xl md:text-4xl lg:text-6xl font-bold rounded-2xl md:rounded-[3rem] shadow-2xl flex items-center justify-center gap-4 md:gap-6 transition-all hover:scale-105 active:scale-95"
+            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-13 sm:h-16 md:h-18 text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl shadow-2xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95"
           >
             {isSubmitting ? (
-              <Loader2 className="h-10 w-10 md:h-16 md:w-16 lg:h-24 lg:w-24 animate-spin" />
+              <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin" />
             ) : (
               <>
-                <Send className="h-10 w-10 md:h-16 md:w-16 lg:h-24 lg:w-24" />
+                <Send className="h-6 w-6 sm:h-8 sm:w-8" />
                 FINALIZAR Y ENVIAR
               </>
             )}

@@ -1,4 +1,3 @@
-
 "use client"
 
 import Image from "next/image"
@@ -73,25 +72,33 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
       )}
 
       <div className="relative z-10 flex-1 overflow-y-auto flex flex-col items-center">
-        <div className="w-full max-w-5xl px-6 py-10 md:py-16 text-white text-center shrink-0">
-          <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-4 drop-shadow-2xl">Información de Registro</h2>
-          <p className="text-white/90 text-xl md:text-2xl lg:text-4xl drop-shadow-lg">Completa tus datos de contacto</p>
+        <div className="w-full max-w-4xl px-4 py-6 sm:py-10 md:py-14 text-white text-center shrink-0">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-2 drop-shadow-2xl">
+            Información de Registro
+          </h2>
+          <p className="text-white/90 text-sm sm:text-base md:text-xl drop-shadow-lg">
+            Completa tus datos de contacto
+          </p>
         </div>
 
-        <div className="w-full max-w-4xl px-6 pb-16">
+        <div className="w-full max-w-2xl px-4 pb-12">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 md:space-y-10 bg-white/95 p-6 md:p-12 lg:p-20 rounded-3xl md:rounded-[3rem] shadow-2xl backdrop-blur-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 lg:gap-16">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6 md:space-y-8 bg-white/95 p-5 sm:p-8 md:p-12 rounded-2xl sm:rounded-3xl shadow-2xl backdrop-blur-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <FormField
                   control={form.control}
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Nombre Completo</FormLabel>
+                      <FormLabel className="text-sm sm:text-base md:text-lg font-bold text-primary">Nombre Completo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. Juan Pérez" {...field} className="h-14 md:h-18 lg:h-24 text-lg md:text-2xl lg:text-3xl bg-white border-primary/20 rounded-xl md:rounded-2xl p-4 md:p-6" />
+                        <Input 
+                          placeholder="Ej. Juan Pérez" 
+                          {...field} 
+                          className="h-12 sm:h-14 md:h-16 text-base sm:text-lg bg-white border-primary/20 rounded-xl px-3.5 sm:px-4" 
+                        />
                       </FormControl>
-                      <FormMessage className="text-sm md:text-lg" />
+                      <FormMessage className="text-xs sm:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -101,16 +108,16 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="phoneNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Número de Celular</FormLabel>
+                      <FormLabel className="text-sm sm:text-base md:text-lg font-bold text-primary">Número de Celular</FormLabel>
                       <FormControl>
                         <Input 
                           type="tel" 
                           placeholder="987 654 321" 
                           {...field} 
-                          className="h-14 md:h-18 lg:h-24 text-lg md:text-2xl lg:text-3xl bg-white border-primary/20 rounded-xl md:rounded-2xl p-4 md:p-6" 
+                          className="h-12 sm:h-14 md:h-16 text-base sm:text-lg bg-white border-primary/20 rounded-xl px-3.5 sm:px-4" 
                         />
                       </FormControl>
-                      <FormMessage className="text-sm md:text-lg" />
+                      <FormMessage className="text-xs sm:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -120,11 +127,15 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="district"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Distrito</FormLabel>
+                      <FormLabel className="text-sm sm:text-base md:text-lg font-bold text-primary">Distrito</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej. Miraflores" {...field} className="h-14 md:h-18 lg:h-24 text-lg md:text-2xl lg:text-3xl bg-white border-primary/20 rounded-xl md:rounded-2xl p-4 md:p-6" />
+                        <Input 
+                          placeholder="Ej. Miraflores" 
+                          {...field} 
+                          className="h-12 sm:h-14 md:h-16 text-base sm:text-lg bg-white border-primary/20 rounded-xl px-3.5 sm:px-4" 
+                        />
                       </FormControl>
-                      <FormMessage className="text-sm md:text-lg" />
+                      <FormMessage className="text-xs sm:text-sm" />
                     </FormItem>
                   )}
                 />
@@ -134,30 +145,30 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                   name="salesRep"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg md:text-2xl lg:text-3xl font-bold text-primary">Encargado</FormLabel>
+                      <FormLabel className="text-sm sm:text-base md:text-lg font-bold text-primary">Encargado</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className="h-14 md:h-18 lg:h-24 text-lg md:text-2xl lg:text-3xl bg-white border-primary/20 rounded-xl md:rounded-2xl px-4 md:px-6">
+                          <SelectTrigger className="h-12 sm:h-14 md:h-16 text-base sm:text-lg bg-white border-primary/20 rounded-xl px-3.5 sm:px-4">
                             <SelectValue placeholder="Seleccione un encargado" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Jose Angel" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Jose Angel</SelectItem>
-                          <SelectItem value="Ricfel" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Ricfel</SelectItem>
-                          <SelectItem value="Faviana" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Faviana</SelectItem>
-                          <SelectItem value="Matías" className="text-base md:text-xl lg:text-2xl p-2 md:p-4">Matías</SelectItem>
+                          <SelectItem value="Jose Angel" className="text-sm sm:text-base p-2 sm:p-3">Jose Angel</SelectItem>
+                          <SelectItem value="Ricfel" className="text-sm sm:text-base p-2 sm:p-3">Ricfel</SelectItem>
+                          <SelectItem value="Faviana" className="text-sm sm:text-base p-2 sm:p-3">Faviana</SelectItem>
+                          <SelectItem value="Matías" className="text-sm sm:text-base p-2 sm:p-3">Matías</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage className="text-sm md:text-lg" />
+                      <FormMessage className="text-xs sm:text-sm" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="pt-6 md:pt-10">
+              <div className="pt-3 sm:pt-6">
                 <Button 
                   type="submit" 
-                  className="w-full bg-primary hover:bg-primary/90 text-white h-16 md:h-24 lg:h-32 text-2xl md:text-3xl lg:text-4xl font-bold rounded-2xl md:rounded-[2rem] shadow-xl transition-all hover:scale-[1.02] active:scale-95"
+                  className="w-full bg-primary hover:bg-primary/90 text-white h-13 sm:h-15 md:h-18 text-lg sm:text-xl md:text-2xl font-bold rounded-xl sm:rounded-2xl shadow-xl transition-all hover:scale-[1.01] active:scale-95"
                 >
                   SIGUIENTE
                 </Button>

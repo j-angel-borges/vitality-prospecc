@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "studio-4949838222-b0ffc"
+  },
+  "targets": {
+    "studio-4949838222-b0ffc": {
+      "hosting": {
+        "vitality-prospecc": [
+          "vitality-prospecc"
+        ],
+        "studio-4949838222-b0ffc": [
+          "studio-4949838222-b0ffc"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

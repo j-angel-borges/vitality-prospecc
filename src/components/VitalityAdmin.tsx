@@ -1,0 +1,3835 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { LeadData, CallLogEntry, DEFAULT_SHEET_TABS, DEFAULT_REC_TABS, LS_ACTIVE_SHEET_TAB, LS_ACTIVE_ADMIN_REP, LS_LEAD_CATEGORY_VIEW } from '@/data/leadTypes';
+export type AdminRep = 'ALL' | 'Jose Angel' | 'Ricfel';
+const getSavedSheetTabs = (): string[] => DEFAULT_SHEET_TABS;
+import { db } from '@/firebase/firebaseClient';
+import {
+  subscribeToCloudTabs,
+  addCloudTab,
+  deleteCloudTab,
+  saveCloudLead,
+  updateCloudLeadField,
+  addCloudCallLog,
+  deleteCloudCallLog,
+  clearCloudNCLogs,
+  deleteCloudLead
+} from '@/services/cloudCrm';
+import { TickToolModal } from './TickToolModal';
+import { VitalityCalendarView } from './VitalityCalendarView';
+import { InstallAppButton } from './InstallAppButton';
+import {
+  CrmUserProfile,
+  loginWithGoogle,
+  logoutUser,
+  getUserProfile,
+  getStoredAccessToken
+} from '@/services/authService';
+import {
+  GoogleContact,
+  getCachedContacts,
+  fetchGoogleContacts,
+  createContactsMap,
+  normalizePhone,
+  exportLeadsToGoogleContactsCsv
+} from '@/services/contactsService';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/firebase/firebaseClient';
+
+interface Props {
+  leads: LeadData[];
+  onClose: () => void;
+  onUpdateLead: (lead: LeadData) => void;
+  onDeleteLead: (leadId: string) => void;
+}
+
+// ─── LocalStorage Keys ────────────────────────────────────────────────────────
+const LS_COLLAPSED_COLS = 'vitality_admin_collapsed_cols_v2';
+const LS_LOCAL_EDITS = 'vitality_admin_local_edits_v2';
+
+export type ColumnKey =
+  | 'nombreMadre'
+  | 'celular'
+  | 'gestCall'
+  | 'obserCalls'
+  | 'distrito'
+  | 'observaciones'
+  | 'estadoCrm'
+  | 'timestamp'
+  | 'edadHijos'
+  | 'nivelPreocupacion'
+  | 'conocimientoDano'
+  | 'preguntaCondicional'
+  | 'respuestaCondicional'
+  | 'interesSolucion'
+  | 'acciones';
+
+interface ColumnMeta {
+  key: ColumnKey;
+  label: string;
+  shortLabel: string;
+  minWidth?: string;
+  headerBg?: string;
+}
+
+// ─── Opciones de Gestión Call ──────────────────────────────────────────────────
+export const CALL_STATUS_OPTIONS = [
+  { code: 'SC', label: 'Si contestó', color: '#16A34A', bg: '#DCFCE7', border: '#86EFAC', darkColor: '#34D399', darkBg: 'rgba(16, 185, 129, 0.2)', darkBorder: '#059669' },
+  { code: 'NC', label: 'No contestó', color: '#D97706', bg: '#FEF3C7', border: '#FCD34D', darkColor: '#FBBF24', darkBg: 'rgba(245, 158, 11, 0.2)', darkBorder: '#D97706' },
+  { code: 'Col', label: 'Colgó', color: '#DC2626', bg: '#FEE2E2', border: '#FCA5A5', darkColor: '#F87171', darkBg: 'rgba(239, 68, 68, 0.2)', darkBorder: '#DC2626' },
+  { code: 'Bz', label: 'Buzón', color: '#7C3AED', bg: '#EDE9FE', border: '#D8B4FE', darkColor: '#C084FC', darkBg: 'rgba(168, 85, 247, 0.2)', darkBorder: '#9333EA' },
+  { code: 'll', label: 'Volver a llamar', color: '#004D99', bg: '#D1E2F5', border: '#93C5FD', darkColor: '#60A5FA', darkBg: 'rgba(59, 130, 246, 0.2)', darkBorder: '#2563EB' },
+] as const;
+
+export type CallStatusCode = typeof CALL_STATUS_OPTIONS[number]['code'];
+
+// Helper para fecha corta (ej: 01/09/26 10:15am)
+export const formatShortDate = (date: Date = new Date()): string => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  let hours = date.getHours();
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}${ampm}`;
+};
+
+export const COLUMNS: ColumnMeta[] = [
+  { key: 'nombreMadre', label: 'Nombre Madre', shortLabel: 'Nombre', minWidth: '160px' },
+  { key: 'celular', label: 'Celular / WhatsApp', shortLabel: 'Celular', minWidth: '140px' },
+  { key: 'gestCall', label: 'Gestión Call', shortLabel: 'Gestión Call', minWidth: '200px', headerBg: '#F0F5FA' },
+  { key: 'obserCalls', label: 'Observaciones Calls', shortLabel: 'Obs Calls', minWidth: '240px', headerBg: '#F0F5FA' },
+  { key: 'distrito', label: 'Distrito', shortLabel: 'Distrito', minWidth: '120px' },
+  { key: 'observaciones', label: 'Observaciones del Lead', shortLabel: 'Obs Lead', minWidth: '220px' },
+  { key: 'estadoCrm', label: 'Estado CRM', shortLabel: 'Estado', minWidth: '135px', headerBg: '#FDF4FF' },
+  { key: 'timestamp', label: 'Fecha', shortLabel: 'Fecha', minWidth: '110px' },
+  { key: 'edadHijos', label: 'Edad Hijos', shortLabel: 'Edad Hijos', minWidth: '105px', headerBg: '#FFF7ED' },
+  { key: 'nivelPreocupacion', label: 'Nivel', shortLabel: 'Nivel', minWidth: '65px', headerBg: '#FFF7ED' },
+  { key: 'conocimientoDano', label: 'Conocimiento Daño', shortLabel: 'Daño', minWidth: '180px', headerBg: '#FFF7ED' },
+  { key: 'preguntaCondicional', label: 'Pregunta Condicional', shortLabel: 'Pregunta', minWidth: '180px', headerBg: '#FFF7ED' },
+  { key: 'respuestaCondicional', label: 'Respuesta', shortLabel: 'Respuesta', minWidth: '85px', headerBg: '#FFF7ED' },
+  { key: 'interesSolucion', label: 'Interés', shortLabel: 'Interés', minWidth: '75px', headerBg: '#FFF7ED' },
+  { key: 'acciones', label: 'Acciones', shortLabel: 'Acción', minWidth: '60px' }
+];
+
+const Icons = {
+  Table: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/>
+    </svg>
+  ),
+  Kanban: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 5v11"/><path d="M12 5v6"/><path d="M18 5v14"/>
+    </svg>
+  ),
+  Download: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+    </svg>
+  ),
+  ArrowLeft: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="19" x2="5" y1="12" y2="12"/><polyline points="12 19 5 12 12 5"/>
+    </svg>
+  ),
+  Search: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </svg>
+  ),
+  Trash2: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+      <line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+    </svg>
+  ),
+  Calendar: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+      <line x1="16" x2="16" y1="2" y2="6"/>
+      <line x1="8" x2="8" y1="2" y2="6"/>
+      <line x1="3" x2="21" y1="10" y2="10"/>
+    </svg>
+  ),
+  MessageCircle: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+    </svg>
+  ),
+  ExternalLink: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+    </svg>
+  ),
+  Edit2: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+    </svg>
+  ),
+  Check: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5"/>
+    </svg>
+  ),
+  ChevronDown: () => (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  ),
+  ChevronUp: () => (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  ),
+  Columns: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/>
+    </svg>
+  ),
+  MinusSquare: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  ),
+  PlusSquare: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  ),
+  History: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+  Phone: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+    </svg>
+  ),
+  MoveRight: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+    </svg>
+  ),
+  Plus: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  ),
+  Filter: () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+    </svg>
+  ),
+  Google: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+    </svg>
+  ),
+  ContactSaved: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+      <polyline points="16 11 18 13 22 9"/>
+    </svg>
+  ),
+  ContactUnsaved: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+      <line x1="19" y1="8" x2="19" y2="12"/>
+      <line x1="19" y1="16" x2="19.01" y2="16"/>
+    </svg>
+  ),
+  Refresh: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 4 23 10 17 10"/>
+      <polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </svg>
+  ),
+  AddressBook: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+      <path d="M6 6h10"/><path d="M6 10h10"/><path d="M6 14h6"/>
+      <circle cx="15" cy="14" r="2"/>
+    </svg>
+  )
+};
+
+const ExpandableText: React.FC<{
+  text?: string;
+  maxChars?: number;
+  className?: string;
+  style?: React.CSSProperties;
+  forceExpandAll?: boolean;
+  fullWidth?: boolean;
+  isDark?: boolean;
+}> = ({
+  text = '',
+  maxChars = 60,
+  className = '',
+  style = {},
+  forceExpandAll = false,
+  fullWidth = true,
+  isDark = false
+}) => {
+  const [localExpanded, setLocalExpanded] = useState<boolean>(false);
+
+  if (!text || text.trim() === '' || text === '-') {
+    return <span style={{ color: '#94A3B8' }}>-</span>;
+  }
+
+  const isExpanded = forceExpandAll || localExpanded;
+  const isLong = text.length > maxChars;
+
+  return (
+    <div style={{ ...style, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', maxWidth: '100%' }} className={className}>
+      <span style={{
+        whiteSpace: isExpanded || fullWidth ? 'pre-wrap' : 'nowrap',
+        overflow: isExpanded || fullWidth ? 'visible' : 'hidden',
+        textOverflow: isExpanded || fullWidth ? 'clip' : 'ellipsis',
+        width: '100%',
+        lineHeight: '1.45',
+        wordBreak: 'break-word',
+        fontSize: '0.85rem'
+      }}>
+        {isExpanded || fullWidth ? text : (isLong ? `${text.slice(0, maxChars)}...` : text)}
+      </span>
+      {isLong && !forceExpandAll && !fullWidth && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setLocalExpanded(!localExpanded);
+          }}
+          style={{
+            border: isDark ? '1px solid #334155' : 'none',
+            background: isDark ? '#1E293B' : '#F0F5FA',
+            color: isDark ? '#60A5FA' : '#004D99',
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            marginTop: '3px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            transition: 'all 0.2s ease'
+          }}
+          title={isExpanded ? 'Contraer texto' : 'Ver texto completo'}
+        >
+          {isExpanded ? (
+            <>
+              <span>Menos</span>
+              <Icons.ChevronUp />
+            </>
+          ) : (
+            <>
+              <span>Ver más</span>
+              <Icons.ChevronDown />
+            </>
+          )}
+        </button>
+      )}
+
+          </div>
+  );
+};
+
+// ─── Inline Editable Text Cell Component ──────────────────────────────────────
+interface EditableCellProps {
+  leadId: string;
+  field: keyof LeadData;
+  value: string;
+  onSave: (leadId: string, field: keyof LeadData, value: string) => Promise<void>;
+  placeholder?: string;
+  style?: React.CSSProperties;
+  maxChars?: number;
+  forceExpandAll?: boolean;
+  fullWidth?: boolean;
+  isDark?: boolean;
+}
+
+const EditableCell: React.FC<EditableCellProps> = ({
+  leadId,
+  field,
+  value,
+  onSave,
+  placeholder = 'Añadir nota...',
+  style = {},
+  maxChars = 60,
+  forceExpandAll = false,
+  fullWidth = true,
+  isDark = false
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(value || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setDraft(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.max(68, textareaRef.current.scrollHeight + 4)}px`;
+    }
+  }, [isEditing, draft]);
+
+  const handleCommit = async () => {
+    setIsSaving(true);
+    await onSave(leadId, field, draft);
+    setIsSaving(false);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleCommit();
+    }
+    if (e.key === 'Escape') {
+      setDraft(value || '');
+      setIsEditing(false);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', minWidth: '220px' }} onClick={(e) => e.stopPropagation()}>
+        <textarea
+          ref={textareaRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          autoFocus
+          style={{
+            width: '100%',
+            minHeight: '68px',
+            fontSize: '0.85rem',
+            lineHeight: '1.45',
+            padding: '6px 8px',
+            border: isDark ? '1.5px solid #60A5FA' : '1.5px solid #4A8FD8',
+            borderRadius: '6px',
+            outline: 'none',
+            fontFamily: 'inherit',
+            resize: 'vertical',
+            boxShadow: isDark ? '0 0 0 2px rgba(96, 165, 250, 0.25)' : '0 0 0 2px rgba(59, 130, 246, 0.15)',
+            background: isDark ? '#1E293B' : '#FFFFFF',
+            color: isDark ? '#F8FAFC' : '#1E293B',
+            whiteSpace: 'pre-wrap'
+          }}
+        />
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={handleCommit}
+            disabled={isSaving}
+            style={{
+              border: 'none',
+              background: '#10B981',
+              color: 'white',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title="Guardar cambios (Enter)"
+          >
+            <Icons.Check />
+            <span>Guardar</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(value || '');
+              setIsEditing(false);
+            }}
+            style={{
+              border: 'none',
+              background: '#94A3B8',
+              color: 'white',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '0.75rem',
+              cursor: 'pointer'
+            }}
+            title="Cancelar (Esc)"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', cursor: 'pointer', width: '100%' }}
+      onDoubleClick={() => setIsEditing(true)}
+      title="Doble clic o clic en el lápiz para editar"
+    >
+      <ExpandableText
+        text={value}
+        maxChars={maxChars}
+        forceExpandAll={forceExpandAll}
+        fullWidth={fullWidth}
+        style={style}
+        isDark={isDark}
+      />
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsEditing(true);
+        }}
+        style={{
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer',
+          padding: '2px 4px',
+          color: '#94A3B8',
+          opacity: 0.7,
+          flexShrink: 0,
+          marginTop: '2px'
+        }}
+        title="Editar texto"
+      >
+        <Icons.Edit2 />
+      </button>
+    </div>
+  );
+};
+
+// ─── Componente Celda de Gestión Call (Selector Minimal + Botón Check + Historial) ─
+interface GestCallCellProps {
+  lead: LeadData;
+  currentCode: string;
+  history: CallLogEntry[];
+  onConfirmCode: (code: string) => Promise<void>;
+  onOpenHistory: (lead: LeadData, mode: 'recent' | 'all') => void;
+  isDark?: boolean;
+}
+
+const GestCallCell: React.FC<GestCallCellProps> = ({
+  lead,
+  currentCode,
+  history,
+  onConfirmCode,
+  onOpenHistory,
+  isDark = false
+}) => {
+  const [selectedCode, setSelectedCode] = useState<string>(currentCode || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setSelectedCode(currentCode || '');
+  }, [currentCode]);
+
+  const activeOpt = CALL_STATUS_OPTIONS.find(o => o.code === selectedCode);
+  const isDirty = selectedCode !== (currentCode || '');
+  const totalLogs = history.length;
+
+  const handleCheck = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!selectedCode || isSaving) return;
+    setIsSaving(true);
+    try {
+      await onConfirmCode(selectedCode);
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 1600);
+    } catch (err) {
+      console.error('Error registrando gestión:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleHistoryClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+      onOpenHistory(lead, 'all');
+    } else {
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        onOpenHistory(lead, 'recent');
+      }, 250);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+      <select
+        value={selectedCode}
+        onChange={(e) => setSelectedCode(e.target.value)}
+        style={{
+          flex: 1,
+          padding: '4px 6px',
+          borderRadius: '6px',
+          border: isDirty 
+            ? (isDark ? '1.5px solid #60A5FA' : '1.5px solid #004D99') 
+            : (isDark ? '1px solid #334155' : '1px solid #CBD5E1'),
+          background: activeOpt 
+            ? (isDark ? (activeOpt.darkBg || 'rgba(59, 130, 246, 0.25)') : activeOpt.bg) 
+            : (isDark ? '#1E293B' : '#FFFFFF'),
+          color: activeOpt 
+            ? (isDark ? (activeOpt.darkColor || '#93C5FD') : activeOpt.color) 
+            : (isDark ? '#CBD5E1' : '#334155'),
+          fontWeight: 700,
+          fontSize: '0.78rem',
+          outline: 'none',
+          cursor: 'pointer',
+          boxShadow: isDirty ? '0 0 0 2px rgba(96, 165, 250, 0.25)' : 'none',
+          transition: 'all 0.2s ease'
+        }}
+        title="Selecciona una opción y da clic en ✓ para guardar la gestión"
+      >
+        <option value="">-- Sin registrar --</option>
+        {CALL_STATUS_OPTIONS.map((opt) => (
+          <option key={opt.code} value={opt.code}>
+            {opt.code} • {opt.label}
+          </option>
+        ))}
+      </select>
+
+      <button
+        type="button"
+        onClick={handleCheck}
+        disabled={!selectedCode || isSaving}
+        style={{
+          border: justSaved || isDirty ? 'none' : (isDark ? '1px solid #059669' : '1px solid #86EFAC'),
+          background: justSaved 
+            ? '#10B981' 
+            : (isDirty 
+              ? '#10B981' 
+              : (selectedCode ? (isDark ? 'rgba(16, 185, 129, 0.25)' : '#DCFCE7') : (isDark ? '#0F172A' : '#F1F5F9'))),
+          color: justSaved 
+            ? '#FFFFFF' 
+            : (isDirty 
+              ? '#FFFFFF' 
+              : (selectedCode ? (isDark ? '#34D399' : '#15803D') : '#94A3B8')),
+          borderRadius: '6px',
+          minWidth: '32px',
+          minHeight: '28px',
+          padding: '4px 8px',
+          cursor: selectedCode && !isSaving ? 'pointer' : 'not-allowed',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: justSaved || isDirty ? '0 2px 5px rgba(16, 185, 129, 0.35)' : (selectedCode ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'),
+          transition: 'all 0.15s ease',
+          opacity: isSaving ? 0.7 : 1,
+          transform: justSaved ? 'scale(1.08)' : 'none',
+          touchAction: 'manipulation'
+        }}
+        title={
+          justSaved 
+            ? '¡Gestión registrada con éxito!' 
+            : (selectedCode 
+              ? `Confirmar llamada (${selectedCode}) con fecha y hora actual (✓)` 
+              : 'Selecciona una gestión primero')
+        }
+      >
+        {isSaving ? (
+          <span style={{ fontSize: '0.7rem', fontWeight: 800 }}>...</span>
+        ) : (
+          <Icons.Check />
+        )}
+      </button>
+
+      <button
+        type="button"
+        onClick={handleHistoryClick}
+        style={{
+          border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+          background: totalLogs > 0 
+            ? (isDark ? 'rgba(59, 130, 246, 0.2)' : '#F0F5FA') 
+            : (isDark ? '#1E293B' : '#FFFFFF'),
+          color: totalLogs > 0 
+            ? (isDark ? '#60A5FA' : '#004D99') 
+            : (isDark ? '#64748B' : '#94A3B8'),
+          borderRadius: '6px',
+          padding: '4px 6px',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '3px',
+          fontSize: '0.72rem',
+          fontWeight: 700,
+          flexShrink: 0,
+          transition: 'all 0.2s ease'
+        }}
+        title="1 clic: Últimas 3 gestiones | 2 clics: Histórico completo"
+      >
+        <Icons.History />
+        {totalLogs > 0 && <span>{totalLogs}</span>}
+      </button>
+    </div>
+  );
+};
+
+// ─── Modal de Historial Minimalista con eliminación individual y limpieza NC ─
+interface CallHistoryModalProps {
+  lead: LeadData;
+  mode: 'recent' | 'all';
+  history: CallLogEntry[];
+  onClose: () => void;
+  onSetMode: (mode: 'recent' | 'all') => void;
+  onAddNewLog: (code: string, obs: string) => Promise<void>;
+  onDeleteLog: (logId: string) => Promise<void>;
+  onClearNC: () => Promise<void>;
+}
+
+const CallHistoryModal: React.FC<CallHistoryModalProps> = ({
+  lead,
+  mode,
+  history,
+  onClose,
+  onSetMode,
+  onAddNewLog,
+  onDeleteLog,
+  onClearNC,
+  isDark = false
+}) => {
+  const [newCode, setNewCode] = useState<string>('SC');
+  const [newObs, setNewObs] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const displayedLogs = mode === 'recent' ? history.slice(0, 3) : history;
+  const hasNC = history.some(l => l.code === 'NC' || l.label === 'No contestó');
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCode) return;
+    setIsSubmitting(true);
+    await onAddNewLog(newCode, newObs);
+    setNewObs('');
+    setIsSubmitting(false);
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(15, 23, 42, 0.5)',
+        backdropFilter: 'blur(3px)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px'
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: isDark ? '#0B0F19' : 'white',
+          borderRadius: '12px',
+          width: '100%',
+          maxWidth: '520px',
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: isDark ? '0 25px 50px -12px rgba(0, 0, 0, 0.7)' : '0 20px 40px rgba(0,0,0,0.15)',
+          border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
+          overflow: 'hidden',
+          transition: 'all 0.25s ease'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isDark ? '#1E293B' : '#F8FAFC' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Icons.Phone />
+              <h3 style={{ margin: 0, fontSize: '0.95rem', color: isDark ? '#F8FAFC' : '#0F172A', fontWeight: 700 }}>
+                {lead.nombreMadre}
+              </h3>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>
+              Tel: <strong>{lead.celular}</strong> • {lead.distrito} • Pestaña: <span style={{ color: '#004D99', fontWeight: 700 }}>{lead.sheetTab || 'Expo M (JA)'}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ border: 'none', background: '#F1F5F9', color: '#64748B', borderRadius: '50%', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Tab Switcher & Clean NC button */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 18px', background: isDark ? '#111827' : '#FFFFFF', borderBottom: isDark ? '1px solid #1E293B' : '1px solid #F1F5F9', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => onSetMode('recent')}
+              style={{
+                border: 'none',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: mode === 'recent' ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#F0F5FA') : (isDark ? '#1E293B' : '#F8FAFC'),
+                color: mode === 'recent' ? (isDark ? '#60A5FA' : '#004D99') : (isDark ? '#94A3B8' : '#64748B')
+              }}
+            >
+              Últimas 3 Gestiones
+            </button>
+            <button
+              type="button"
+              onClick={() => onSetMode('all')}
+              style={{
+                border: 'none',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: mode === 'all' ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#F0F5FA') : (isDark ? '#1E293B' : '#F8FAFC'),
+                color: mode === 'all' ? (isDark ? '#60A5FA' : '#004D99') : (isDark ? '#94A3B8' : '#64748B')
+              }}
+            >
+              Histórico Completo ({history.length})
+            </button>
+          </div>
+
+          {hasNC && (
+            <button
+              type="button"
+              onClick={onClearNC}
+              style={{
+                border: '1px solid #FECACA',
+                background: '#FEF2F2',
+                color: '#EF4444',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Eliminar todos los registros NC de este lead"
+            >
+              <Icons.Trash2 />
+              <span>Eliminar NCs</span>
+            </button>
+          )}
+        </div>
+
+        {/* List of Calls */}
+        <div style={{ padding: '14px 18px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {displayedLogs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px 10px', color: '#94A3B8', fontSize: '0.8rem' }}>
+              Sin gestiones registradas aún.
+            </div>
+          ) : (
+            displayedLogs.map((log, idx) => {
+              const opt = CALL_STATUS_OPTIONS.find(o => o.code === log.code || o.label === log.code);
+              return (
+                <div
+                  key={log.id || idx}
+                  style={{
+                    border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    background: idx === 0 
+                      ? (isDark ? '#1E293B' : '#F8FAFC') 
+                      : (isDark ? '#111827' : '#FFFFFF'),
+                    borderLeft: `3.5px solid ${isDark ? (opt?.darkColor || '#60A5FA') : (opt?.color || '#4A8FD8')}`
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span
+                      style={{
+                        background: opt?.bg || '#F0F5FA',
+                        color: opt?.color || '#004D99',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        border: `1px solid ${opt?.border || '#93C5FD'}`
+                      }}
+                    >
+                      {opt?.code || log.code} • {opt?.label || log.label || 'Gestión'}
+                    </span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                        {log.datetime}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteLog(log.id)}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#EF4444',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          opacity: 0.75
+                        }}
+                        title="Eliminar este registro del histórico"
+                      >
+                        <Icons.Trash2 />
+                      </button>
+                    </div>
+                  </div>
+
+                  {log.observation ? (
+                    <div style={{ fontSize: '0.8rem', color: isDark ? '#E2E8F0' : '#334155', lineHeight: '1.4', marginTop: '3px' }}>
+                      {log.observation}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontStyle: 'italic' }}>
+                      Sin observaciones
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Minimal Add New Call Bar */}
+        <form onSubmit={handleAdd} style={{ padding: '10px 18px', borderTop: isDark ? '1px solid #334155' : '1px solid #E2E8F0', background: isDark ? '#1E293B' : '#F8FAFC', display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <select
+            value={newCode}
+            onChange={(e) => setNewCode(e.target.value)}
+            style={{
+              padding: '5px 8px',
+              borderRadius: '6px',
+              border: isDark ? '1px solid #475569' : '1px solid #CBD5E1',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              background: isDark ? '#0B0F19' : 'white',
+              color: isDark ? '#F8FAFC' : '#1E293B',
+              outline: 'none'
+            }}
+          >
+            {CALL_STATUS_OPTIONS.map(opt => (
+              <option key={opt.code} value={opt.code}>{opt.code} ({opt.label})</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={newObs}
+            onChange={(e) => setNewObs(e.target.value)}
+            placeholder="Observación de la llamada..."
+            style={{
+              flex: 1,
+              padding: '5px 8px',
+              borderRadius: '6px',
+              border: isDark ? '1px solid #475569' : '1px solid #CBD5E1',
+              fontSize: '0.75rem',
+              outline: 'none',
+              background: isDark ? '#0B0F19' : 'white',
+              color: isDark ? '#F8FAFC' : '#1E293B'
+            }}
+          />
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            style={{
+              background: '#10B981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '5px 10px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px'
+            }}
+            title="Guardar nueva gestión (✓)"
+          >
+            <Icons.Check />
+            <span>Guardar</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ─── Helper para normalizar texto (Title Case y remover puntuación final) ────
+export const normalizeTitleCase = (str: string): string => {
+  if (!str) return '';
+  const cleaned = str.trim().replace(/^[,.\s-]+|[,.\s-]+$/g, '');
+  if (!cleaned) return '';
+  return cleaned
+    .toLowerCase()
+    .split(/\s+/)
+    .map(word => {
+      if (['de', 'del', 'la', 'las', 'el', 'los', 'y', 'en'].includes(word)) {
+        return word;
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+};
+
+// ─── Componente Popover de Filtro Tipo Google Sheets ─────────────────────────
+interface ColumnFilterPopoverProps {
+  columnKey: 'gestCall' | 'distrito' | 'estadoCrm';
+  columnLabel: string;
+  uniqueValues: string[];
+  selectedValues: string[];
+  onApply: (selected: string[]) => void;
+  onClose: () => void;
+  renderValueLabel?: (val: string) => React.ReactNode;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
+  isDark?: boolean;
+}
+
+const ColumnFilterPopover: React.FC<ColumnFilterPopoverProps> = ({
+  columnLabel,
+  uniqueValues,
+  selectedValues,
+  onApply,
+  onClose,
+  renderValueLabel,
+  triggerRef,
+  isDark = false
+}) => {
+  const [tempSelected, setTempSelected] = useState<Set<string>>(() => new Set(selectedValues));
+  const [filterSearch, setFilterSearch] = useState<string>('');
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (triggerRef?.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const popoverWidth = 260;
+      let left = rect.left;
+      // Evitar salir de la pantalla por la derecha
+      if (left + popoverWidth > window.innerWidth - 10) {
+        left = window.innerWidth - popoverWidth - 10;
+      }
+      if (left < 10) left = 10;
+
+      setCoords({
+        top: rect.bottom + 6,
+        left
+      });
+    }
+  }, [triggerRef]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node) &&
+        triggerRef?.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose, triggerRef]);
+
+  const filteredValues = uniqueValues.filter(val => {
+    const displayStr = val === '__BLANK__' ? '(Vacías)' : val;
+    return displayStr.toLowerCase().includes(filterSearch.toLowerCase());
+  });
+
+  const handleToggleValue = (val: string) => {
+    setTempSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(val)) {
+        next.delete(val);
+      } else {
+        next.add(val);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setTempSelected(new Set(uniqueValues));
+  };
+
+  const handleClearAll = () => {
+    setTempSelected(new Set());
+  };
+
+  const handleApply = () => {
+    onApply(Array.from(tempSelected));
+    onClose();
+  };
+
+  return (
+    <div
+      ref={popoverRef}
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        position: 'fixed',
+        top: `${coords.top}px`,
+        left: `${coords.left}px`,
+        zIndex: 99999,
+        background: isDark ? '#1E293B' : '#FFFFFF',
+        borderRadius: '10px',
+        boxShadow: isDark 
+          ? '0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.08)' 
+          : '0 12px 36px rgba(15, 23, 42, 0.22), 0 4px 12px rgba(15, 23, 42, 0.1)',
+        border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+        width: '260px',
+        padding: '14px',
+        fontSize: '0.82rem',
+        color: isDark ? '#F8FAFC' : '#1E293B',
+        textAlign: 'left',
+        fontWeight: 'normal',
+        transition: 'background 0.25s ease'
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <span style={{ fontWeight: 700, fontSize: '0.84rem', color: isDark ? '#F8FAFC' : '#0F172A' }}>
+          Filtrar por {columnLabel}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: '#94A3B8',
+            fontSize: '1rem',
+            padding: '0 4px',
+            lineHeight: 1
+          }}
+          title="Cerrar"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Input de búsqueda de valores */}
+      <div style={{ marginBottom: '8px' }}>
+        <input
+          type="text"
+          value={filterSearch}
+          onChange={(e) => setFilterSearch(e.target.value)}
+          placeholder="Buscar valores..."
+          style={{
+            width: '100%',
+            padding: '6px 10px',
+            borderRadius: '6px',
+            border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+            background: isDark ? '#0B0F19' : '#FFFFFF',
+            color: isDark ? '#F8FAFC' : '#1E293B',
+            fontSize: '0.8rem',
+            outline: 'none',
+            boxSizing: 'border-box'
+          }}
+          autoFocus
+        />
+      </div>
+
+      {/* Botones Seleccionar Todo / Borrar */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '8px', paddingBottom: '8px', borderBottom: isDark ? '1px solid #334155' : '1px solid #F1F5F9' }}>
+        <button
+          type="button"
+          onClick={handleSelectAll}
+          style={{
+            border: 'none',
+            background: 'none',
+            color: isDark ? '#60A5FA' : '#004D99',
+            fontSize: '0.74rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: 0
+          }}
+        >
+          Seleccionar todo
+        </button>
+        <span style={{ color: isDark ? '#475569' : '#CBD5E1' }}>•</span>
+        <button
+          type="button"
+          onClick={handleClearAll}
+          style={{
+            border: 'none',
+            background: 'none',
+            color: isDark ? '#60A5FA' : '#004D99',
+            fontSize: '0.74rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: 0
+          }}
+        >
+          Borrar
+        </button>
+      </div>
+
+      {/* Lista de checkboxes con scroll */}
+      <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px', paddingRight: '4px' }}>
+        {filteredValues.length === 0 ? (
+          <div style={{ color: '#94A3B8', fontSize: '0.75rem', padding: '12px 0', textAlign: 'center' }}>
+            No se encontraron coincidencias
+          </div>
+        ) : (
+          filteredValues.map(val => {
+            const isChecked = tempSelected.has(val);
+            return (
+              <label
+                key={val}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  padding: '4px 6px',
+                  borderRadius: '6px',
+                  background: isChecked ? (isDark ? 'rgba(59, 130, 246, 0.15)' : '#F1F5F9') : 'transparent',
+                  color: isDark ? '#E2E8F0' : 'inherit',
+                  fontSize: '0.78rem'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => handleToggleValue(val)}
+                  style={{ cursor: 'pointer', accentColor: '#004D99', margin: 0 }}
+                />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {renderValueLabel ? renderValueLabel(val) : (val === '__BLANK__' ? <em style={{ color: '#94A3B8' }}>(Vacías)</em> : val)}
+                </span>
+              </label>
+            );
+          })
+        )}
+      </div>
+
+      {/* Botones de acción */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: isDark ? '1px solid #334155' : '1px solid #E2E8F0' }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+            background: isDark ? '#1E293B' : '#FFFFFF',
+            color: isDark ? '#94A3B8' : '#475569',
+            padding: '5px 12px',
+            borderRadius: '6px',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={handleApply}
+          style={{
+            border: 'none',
+            background: '#004D99',
+            color: '#FFFFFF',
+            padding: '5px 14px',
+            borderRadius: '6px',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            cursor: 'pointer'
+          }}
+        >
+          Aceptar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Admin Panel Component ───────────────────────────────────────────────
+export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, onDeleteLead }) => {
+  const [viewMode, setViewMode] = useState<'spreadsheet' | 'crm' | 'campaigns' | 'calendar'>('spreadsheet');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
+  const [activeFilterCol, setActiveFilterCol] = useState<string | null>(null);
+  const filterBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [expandAllTexts, setExpandAllTexts] = useState<boolean>(false);
+  const [isColMenuOpen, setIsColMenuOpen] = useState<boolean>(false);
+
+  // ── Auth & Google Contacts Sync States ────────────────────────────────────
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<CrmUserProfile | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
+  const [contactsMap, setContactsMap] = useState<Map<string, GoogleContact>>(() => {
+    return createContactsMap(getCachedContacts());
+  });
+  const [isSyncingContacts, setIsSyncingContacts] = useState<boolean>(false);
+  const [onlyUnsavedContacts, setOnlyUnsavedContacts] = useState<boolean>(false);
+
+  // Listener de Firebase Auth & Perfil
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setCurrentUser(u);
+      if (u) {
+        const p = await getUserProfile(u.uid, u.email);
+        setUserProfile(p);
+        // RBAC Estricto:
+        // Superadmin (mipropiadinastia@gmail.com) ve ALL y puede filtrar
+        // Asesores (jangelborges -> Jose Angel, r.olaizola -> Ricfel) solo ven sus leads
+        if (p?.role === 'superadmin') {
+          setSelectedRep('ALL');
+        } else if (p?.assignedRepName) {
+          setSelectedRep(p.assignedRepName as AdminRep);
+          if (p.assignedRepName === 'Ricfel') {
+            setActiveTab('Mod Avcn (R)');
+          } else {
+            setActiveTab('Prospecc');
+          }
+        }
+        // Intentar sincronizar contactos si hay token disponible
+        const token = getStoredAccessToken();
+        if (token) {
+          handleSyncContacts(token, false);
+        }
+      } else {
+        setUserProfile(null);
+      }
+      setIsAuthLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  // Función para sincronizar contactos de Google y actualizar nombres en CRM
+  const handleSyncContacts = async (token?: string, userInitiated = true) => {
+    const accessToken = token || getStoredAccessToken();
+    if (!accessToken) {
+      if (userInitiated) {
+        handleGoogleLogin();
+      }
+      return;
+    }
+    setIsSyncingContacts(true);
+    try {
+      const contacts = await fetchGoogleContacts(accessToken);
+      const mapped = createContactsMap(contacts);
+      setContactsMap(mapped);
+
+      // Sincronización inteligente de nombres:
+      // Si un lead del CRM coincide por teléfono con la agenda de Google Contacts
+      // y el nombre en Google Contacts es más reciente o diferente, actualizarlo en CRM y Firestore.
+      let updatedCount = 0;
+      for (const lead of leads) {
+        const rawPhone = getLeadField(lead, 'celular');
+        const phoneNorm = normalizePhone(rawPhone);
+        if (!phoneNorm) continue;
+
+        const matched = mapped.get(phoneNorm);
+        if (matched && matched.name && matched.name !== 'Sin Nombre') {
+          const currentName = (getLeadField(lead, 'nombreMadre') || '').trim();
+          const googleName = matched.name.trim();
+
+          // Si difiere o el CRM tenía un nombre genérico/incompleto, actualizar
+          if (currentName !== googleName) {
+            console.log(`[Google Contacts Sync] Actualizando ${lead.id}: '${currentName}' -> '${googleName}'`);
+            const updatedLead: LeadData = {
+              ...lead,
+              nombreMadre: googleName
+            };
+            onUpdateLead(updatedLead);
+            try {
+              await saveCloudLead(updatedLead);
+            } catch (err) {
+              console.warn(`Error guardando nombre sincronizado para lead ${lead.id}:`, err);
+            }
+            updatedCount++;
+          }
+        }
+      }
+      if (updatedCount > 0) {
+        console.log(`[Google Contacts Sync] Se actualizaron ${updatedCount} nombres desde Google Contacts.`);
+      }
+    } catch (e: any) {
+      console.warn('Error al sincronizar contactos:', e);
+      const isInsufficientScope = e?.message?.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') || e?.message?.includes('403');
+      if (isInsufficientScope) {
+        // Purgar token viejo sin scope y re-lanzar popup de consentimiento
+        setStoredAccessToken(null);
+        if (userInitiated) {
+          console.log('[Google Contacts] Token sin scope de contactos detectado. Reautenticando...');
+          handleGoogleLogin();
+        }
+      } else if (userInitiated) {
+        setAuthErrorModal({
+          code: 'google-people-api/error',
+          message: e?.message || 'Error al obtener contactos desde la API de Google People.'
+        });
+      }
+    } finally {
+      setIsSyncingContacts(false);
+    }
+  };
+
+  const [authErrorModal, setAuthErrorModal] = useState<{ code: string; message: string } | null>(null);
+
+  // Login con Google
+  const handleGoogleLogin = async () => {
+    setIsAuthLoading(true);
+    try {
+      const { user, profile, accessToken } = await loginWithGoogle();
+      setCurrentUser(user);
+      setUserProfile(profile);
+      if (profile?.role === 'superadmin') {
+        setSelectedRep('ALL');
+      } else if (profile?.assignedRepName) {
+        setSelectedRep(profile.assignedRepName as AdminRep);
+        if (profile.assignedRepName === 'Ricfel') {
+          setActiveTab('Mod Avcn (R)');
+        } else {
+          setActiveTab('Prospecc');
+        }
+      }
+      if (accessToken) {
+        await handleSyncContacts(accessToken, false);
+        try {
+          window.dispatchEvent(new Event('vitality_google_token_updated'));
+        } catch {}
+      }
+    } catch (e: any) {
+      console.error('Error al iniciar sesión con Google:', e);
+      const code = e?.code || 'auth/unknown';
+      const msg = e?.message || 'Error desconocido al conectar con Google.';
+      setAuthErrorModal({ code, message: msg });
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  // Logout
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setCurrentUser(null);
+      setUserProfile(null);
+    } catch (e) {
+      console.error('Error al cerrar sesión:', e);
+    }
+  };
+
+  // Exportar lista actual a CSV de Google Contacts
+  const handleExportGoogleContacts = () => {
+    const dataToExport = filteredLeads.map(l => ({
+      nombreMadre: getLeadField(l, 'nombreMadre'),
+      celular: getLeadField(l, 'celular'),
+      distrito: getLeadField(l, 'distrito'),
+      sheetTab: getLeadSheetTab(l)
+    }));
+    const filename = `contactos_vitality_${activeTab === '__ALL__' ? 'todas' : activeTab.replace(/\s+/g, '_')}.csv`;
+    exportLeadsToGoogleContactsCsv(dataToExport, filename);
+  };
+
+  // ── Encargado / Perfil Switcher State (José Angel vs Ricfel) ────────────────
+  // ── Vista Alternable: Clientes vs Reclutas (Single Toggle Button) ──────────
+  const [leadCategoryView, setLeadCategoryView] = useState<'clientes' | 'reclutas'>(() => {
+    try {
+      const saved = localStorage.getItem(LS_LEAD_CATEGORY_VIEW);
+      if (saved === 'reclutas' || saved === 'clientes') return saved;
+      return 'clientes';
+    } catch {
+      return 'clientes';
+    }
+  });
+
+  const handleToggleCategoryView = () => {
+    const nextView = leadCategoryView === 'clientes' ? 'reclutas' : 'clientes';
+    setLeadCategoryView(nextView);
+    try {
+      localStorage.setItem(LS_LEAD_CATEGORY_VIEW, nextView);
+    } catch (e) {}
+    if (nextView === 'reclutas') {
+      setActiveTab('Esan');
+    } else {
+      setActiveTab('Prospecc');
+    }
+  };
+
+  const isDark = leadCategoryView === 'reclutas';
+
+  const [selectedRep, setSelectedRep] = useState<AdminRep>(() => {
+    try {
+      const saved = localStorage.getItem(LS_ACTIVE_ADMIN_REP);
+      if (saved === 'Ricfel' || saved === 'Jose Angel' || saved === 'ALL') return saved;
+      return 'ALL';
+    } catch {
+      return 'ALL';
+    }
+  });
+  const [showRepModal, setShowRepModal] = useState<boolean>(false);
+
+  const handleSelectRep = (rep: AdminRep) => {
+    setSelectedRep(rep);
+    try {
+      localStorage.setItem(LS_ACTIVE_ADMIN_REP, rep);
+    } catch (e) {}
+    if (rep === 'Ricfel') {
+      setActiveTab('Mod Avcn (R)');
+    } else {
+      setActiveTab('Prospecc');
+    }
+    setShowRepModal(false);
+  };
+
+  // ── Sheet Tabs State sincronizado en tiempo real con Firestore ──────────────
+  const [sheetTabs, setSheetTabs] = useState<string[]>(() => getSavedSheetTabs());
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    try {
+      const active = localStorage.getItem(LS_ACTIVE_SHEET_TAB);
+      return active || 'Prospecc';
+    } catch {
+      return 'Prospecc';
+    }
+  });
+
+  // Escucha en tiempo real de pestañas desde la nube
+  useEffect(() => {
+    const unsubscribe = subscribeToCloudTabs((cloudTabs) => {
+      setSheetTabs(cloudTabs);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // New tab inline creator state
+  const [isAddingTab, setIsAddingTab] = useState<boolean>(false);
+  const [newTabInput, setNewTabInput] = useState<string>('');
+
+  // Tick Tool (Campañas WhatsApp) Checkbox Selection State
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+        window.parent.postMessage(
+          {
+            type: 'ZENTRY_CRM_SELECTION',
+            leadIds: selectedLeadIds,
+            selectedLeadIds,
+            activeTab
+          },
+          '*'
+        );
+      }
+    } catch (e) {}
+  }, [selectedLeadIds, activeTab]);
+
+  // Modal de Historial State
+  const [activeHistoryModal, setActiveHistoryModal] = useState<{
+    lead: LeadData;
+    mode: 'recent' | 'all';
+  } | null>(null);
+
+  // ── 1. Collapsed columns state with LocalStorage Persistence ────────────────
+  const [collapsedCols, setCollapsedCols] = useState<Record<ColumnKey, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(LS_COLLAPSED_COLS);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // ── 2. Local Text Edits & Call Logs Cache with LocalStorage Persistence ──────
+  const [localEdits, setLocalEdits] = useState<Record<string, Partial<LeadData>>>(() => {
+    try {
+      const saved = localStorage.getItem(LS_LOCAL_EDITS);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Broadcast resolved leads & activeTab to parent QZ-Hub Tick Tool
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+        const resolvedLeads = leads.map((l) => {
+          const edit = localEdits[l.id] || {};
+          const merged = { ...l, ...edit };
+          const tab = merged.sheetTab && merged.sheetTab.trim() !== '' ? merged.sheetTab : 'Expo M (JA)';
+          return {
+            id: merged.id,
+            momName: merged.nombreMadre || 'Sin nombre',
+            phone: merged.celular || '',
+            origin: tab,
+            district: merged.distrito || 'Lima',
+            childAge: merged.edadHijos || '',
+            interestNotes: merged.observaciones || ''
+          };
+        });
+        window.parent.postMessage(
+          {
+            type: 'ZENTRY_CRM_LEADS_SYNC',
+            leads: resolvedLeads,
+            activeTab,
+            sheetTabs
+          },
+          '*'
+        );
+      }
+    } catch (e) {}
+  }, [leads, localEdits, activeTab, sheetTabs]);
+
+  // Save collapsed cols whenever changed
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_COLLAPSED_COLS, JSON.stringify(collapsedCols));
+    } catch (e) {
+      console.warn('Error saving collapsed columns to localStorage', e);
+    }
+  }, [collapsedCols]);
+
+  // Save local edits whenever changed
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_LOCAL_EDITS, JSON.stringify(localEdits));
+    } catch (e) {
+      console.warn('Error saving local edits to localStorage', e);
+    }
+  }, [localEdits]);
+
+  // Save active tab
+  const handleSelectTab = (tab: string) => {
+    setActiveTab(tab);
+    try {
+      localStorage.setItem(LS_ACTIVE_SHEET_TAB, tab);
+    } catch (e) {}
+  };
+
+  // Add new sheet tab to cloud
+  const handleCreateNewTab = async () => {
+    const trimmed = newTabInput.trim();
+    if (!trimmed) {
+      setIsAddingTab(false);
+      return;
+    }
+    const updated = await addCloudTab(trimmed);
+    setSheetTabs(updated);
+    handleSelectTab(trimmed);
+    setNewTabInput('');
+    setIsAddingTab(false);
+  };
+
+  // Delete sheet tab from cloud
+  const handleDeleteTab = async (tabToDelete: string) => {
+    if (!window.confirm(`¿Seguro que deseas eliminar la pestaña "${tabToDelete}" de la nube?`)) return;
+    const updated = await deleteCloudTab(tabToDelete);
+    setSheetTabs(updated);
+    if (activeTab === tabToDelete) {
+      handleSelectTab('Expo M (JA)');
+    }
+  };
+
+  const isColCollapsed = (key: ColumnKey) => !!collapsedCols[key];
+
+  const toggleCol = (key: ColumnKey) => {
+    setCollapsedCols(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const applyPreset = (preset: 'crm' | 'stand' | 'all') => {
+    const next: Record<string, boolean> = {};
+    if (preset === 'crm') {
+      COLUMNS.forEach(col => {
+        const keep = ['nombreMadre', 'celular', 'gestCall', 'obserCalls', 'estadoCrm', 'acciones'].includes(col.key);
+        next[col.key] = !keep;
+      });
+    } else if (preset === 'stand') {
+      COLUMNS.forEach(col => {
+        const keep = ['nombreMadre', 'celular', 'distrito', 'observaciones', 'timestamp', 'acciones'].includes(col.key);
+        next[col.key] = !keep;
+      });
+    } else {
+      COLUMNS.forEach(col => {
+        next[col.key] = false;
+      });
+    }
+    setCollapsedCols(next as Record<ColumnKey, boolean>);
+  };
+
+  const getLeadField = (lead: LeadData, field: keyof LeadData): any => {
+    const edit = localEdits[lead.id];
+    if (edit && edit[field] !== undefined) {
+      return edit[field];
+    }
+    return lead[field];
+  };
+
+  // Resolver a qué pestaña pertenece el lead
+  const getLeadSheetTab = (lead: LeadData): string => {
+    const tab = getLeadField(lead, 'sheetTab');
+    if (tab && tab.trim() !== '') {
+      // En modo Reclutas: normalizar estrictamente a una de las 3 pestañas de reclutamiento
+      if (leadCategoryView === 'reclutas') {
+        if (tab.includes('Esan')) return 'Esan';
+        if (tab === 'Mod Aviacion' || tab === 'Mod Aviacion (JA)' || tab.includes('Aviacion')) return 'Mod Aviacion';
+        if (tab === 'RP' || tab.includes('/ RP') || tab.startsWith('RP') || tab.includes('Royal')) return 'RP';
+        return 'RP';
+      }
+      // En modo Clientes: preservar el nombre exacto de la pestaña (ej: 'Mod Aviacion (JA)')
+      return tab;
+    }
+    // Si es recluta pero no tiene tab especificada, inferir de nombreMadre
+    if (lead.tipoLead === 'rec' || (lead.nombreMadre && lead.nombreMadre.includes('/ Rec /'))) {
+      const name = lead.nombreMadre || '';
+      if (name.includes('Esan')) return 'Esan';
+      if (name.includes('Mod Aviacion') || name.includes('Aviacion')) return 'Mod Aviacion';
+      if (name.includes('/ RP') || name.includes('/ Royal')) return 'RP';
+      return 'RP';
+    }
+    return 'Prospecc';
+  };
+
+  const getLeadHistory = (lead: LeadData): CallLogEntry[] => {
+    const edit = localEdits[lead.id];
+    if (edit && edit.callHistory !== undefined) {
+      return edit.callHistory;
+    }
+    if (lead.callHistory && lead.callHistory.length > 0) {
+      return lead.callHistory;
+    }
+    if (lead.gestCall && lead.gestCall.trim() !== '') {
+      return [
+        {
+          id: `log-init-${lead.id}`,
+          code: lead.gestCall,
+          datetime: lead.timestamp || formatShortDate(),
+          observation: lead.obserCalls || ''
+        }
+      ];
+    }
+    return [];
+  };
+
+  // ── 3. Save Text Field Handler (Cloud Firestore + LocalStorage) ────────────
+  const handleSaveField = useCallback(async (leadId: string, field: keyof LeadData, value: string) => {
+    setLocalEdits(prev => ({
+      ...prev,
+      [leadId]: {
+        ...(prev[leadId] || {}),
+        [field]: value
+      }
+    }));
+
+    const target = leads.find(l => l.id === leadId);
+    if (!target) return;
+
+    const updatedLead: LeadData = {
+      ...target,
+      [field]: value
+    };
+    onUpdateLead(updatedLead);
+
+    try {
+      // CRITICAL FIX: Always save the full lead document to Firestore first.
+      // If we only patch one field on a document that doesn't exist yet in
+      // Firestore (because it lives in the static data fallback), Firestore
+      // creates a nearly-empty document.  The real-time listener then sees
+      // that ID as "already in Firestore" and drops the static copy, making
+      // the lead appear to vanish.  Saving the full lead with merge:true is
+      // always safe: it's idempotent for existing docs and correct for new ones.
+      await saveCloudLead(updatedLead);
+    } catch (err) {
+      console.warn(`Error guardando lead completo en la nube para el lead ${leadId}:`, err);
+    }
+  }, [leads, onUpdateLead]);
+
+  // ── Traspasar un Lead a otra Pestaña ─────────────────────────────────────────
+  const handleMoveLeadToTab = useCallback(async (leadId: string, newTab: string) => {
+    await handleSaveField(leadId, 'sheetTab', newTab);
+  }, [handleSaveField]);
+
+  // ── 4. Registrar Gestión Call con Fecha y Hora y sincronizar Historial en Nube ─
+  const handleRegisterCallLog = useCallback(async (leadId: string, code: string, observation?: string) => {
+    const target = leads.find(l => l.id === leadId);
+    if (!target) return;
+
+    const shortDatetime = formatShortDate();
+    const opt = CALL_STATUS_OPTIONS.find(o => o.code === code);
+    const label = opt?.label || code;
+    const currentObs = observation !== undefined ? observation : (getLeadField(target, 'obserCalls') || '');
+
+    const newEntry: CallLogEntry = {
+      id: `call-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      code,
+      label,
+      datetime: shortDatetime,
+      observation: currentObs
+    };
+
+    const currentLeadState: LeadData = {
+      ...target,
+      ...(localEdits[leadId] || {})
+    };
+
+    try {
+      const updatedLead = await addCloudCallLog(currentLeadState, newEntry);
+      setLocalEdits(prev => ({
+        ...prev,
+        [leadId]: {
+          ...(prev[leadId] || {}),
+          gestCall: code,
+          obserCalls: currentObs,
+          callHistory: updatedLead.callHistory,
+          estadoCrm: updatedLead.estadoCrm
+        }
+      }));
+      onUpdateLead(updatedLead);
+    } catch (err) {
+      console.warn(`Error actualizando historial de llamada en la nube:`, err);
+    }
+  }, [leads, localEdits, onUpdateLead]);
+
+  // ── 5. Eliminar Entrada Individual del Historial en la Nube ─────────────────
+  const handleDeleteLog = useCallback(async (leadId: string, logId: string) => {
+    const target = leads.find(l => l.id === leadId);
+    if (!target) return;
+
+    const currentLeadState: LeadData = {
+      ...target,
+      ...(localEdits[leadId] || {})
+    };
+
+    try {
+      const updatedLead = await deleteCloudCallLog(currentLeadState, logId);
+      setLocalEdits(prev => ({
+        ...prev,
+        [leadId]: {
+          ...(prev[leadId] || {}),
+          gestCall: updatedLead.gestCall,
+          obserCalls: updatedLead.obserCalls,
+          callHistory: updatedLead.callHistory
+        }
+      }));
+      onUpdateLead(updatedLead);
+    } catch (err) {
+      console.warn('Error eliminando log de llamada en la nube:', err);
+    }
+  }, [leads, localEdits, onUpdateLead]);
+
+  // ── 6. Limpiar Registros NC de un Lead en la Nube ───────────────────────────
+  const handleClearNC = useCallback(async (leadId: string) => {
+    const target = leads.find(l => l.id === leadId);
+    if (!target) return;
+
+    const currentLeadState: LeadData = {
+      ...target,
+      ...(localEdits[leadId] || {})
+    };
+
+    try {
+      const updatedLead = await clearCloudNCLogs(currentLeadState);
+      setLocalEdits(prev => ({
+        ...prev,
+        [leadId]: {
+          ...(prev[leadId] || {}),
+          gestCall: updatedLead.gestCall,
+          obserCalls: updatedLead.obserCalls,
+          callHistory: updatedLead.callHistory
+        }
+      }));
+      onUpdateLead(updatedLead);
+    } catch (err) {
+      console.warn('Error limpiando registros NC en la nube:', err);
+    }
+  }, [leads, localEdits, onUpdateLead]);
+
+  const handleUpdateStatus = async (leadId: string, newStatus: LeadData['estadoCrm']) => {
+    await handleSaveField(leadId, 'estadoCrm', newStatus as string);
+  };
+
+  const handleDelete = async (leadId: string) => {
+    if (!window.confirm('¿Seguro que deseas eliminar este prospecto permanentemente de la nube?')) return;
+    try {
+      await deleteCloudLead(leadId);
+    } catch (e) {
+      console.warn('Error al borrar en la nube:', e);
+    }
+    setLocalEdits(prev => {
+      const next = { ...prev };
+      delete next[leadId];
+      return next;
+    });
+    onDeleteLead(leadId);
+  };
+
+  // Leads filtrados por Categoría (Clientes vs Reclutas) y Encargado
+  const categoryLeads = React.useMemo(() => {
+    return leads.filter(lead => {
+      const isRec = lead.tipoLead === 'rec' || (lead.sheetTab && lead.sheetTab.startsWith('Rec')) || (lead.nombreMadre && lead.nombreMadre.includes('/ Rec /'));
+      if (leadCategoryView === 'reclutas') return isRec;
+      return !isRec;
+    });
+  }, [leads, leadCategoryView]);
+
+  // Pestañas visibles según categoría y encargado activo:
+  // En Reclutas: estrictamente las 3 pestañas solicitadas ['Esan', 'Mod Aviacion', 'RP']
+  const visibleTabs = React.useMemo(() => {
+    if (leadCategoryView === 'reclutas') {
+      return DEFAULT_REC_TABS;
+    }
+    return sheetTabs.filter(tab => {
+      if (selectedRep === 'Ricfel') {
+        return tab === 'Mod Avcn (R)' || tab.toLowerCase().includes('ricfel');
+      }
+      if (selectedRep === 'Jose Angel') {
+        return tab !== 'Mod Avcn (R)' && !tab.toLowerCase().includes('ricfel');
+      }
+      return true; // 'ALL'
+    });
+  }, [sheetTabs, selectedRep, leadCategoryView]);
+
+  // Leads filtrados por Encargado seleccionado
+  const repLeads = React.useMemo(() => {
+    return categoryLeads.filter(lead => {
+      if (selectedRep === 'Ricfel') {
+        return lead.salesRep === 'Ricfel' || getLeadSheetTab(lead) === 'Mod Avcn (R)';
+      }
+      if (selectedRep === 'Jose Angel') {
+        return lead.salesRep !== 'Ricfel' && getLeadSheetTab(lead) !== 'Mod Avcn (R)';
+      }
+      return true;
+    });
+  }, [categoryLeads, selectedRep]);
+
+  // Valores únicos para filtros de columna (calculados sobre los leads de la pestaña activa o todos)
+  const uniqueDistritos = React.useMemo(() => {
+    const vals = new Set<string>();
+    let hasBlank = false;
+    const baseLeads = activeTab === '__ALL__' ? repLeads : repLeads.filter(l => getLeadSheetTab(l) === activeTab);
+    baseLeads.forEach(l => {
+      const raw = (getLeadField(l, 'distrito') || '').trim();
+      const norm = normalizeTitleCase(raw);
+      if (norm) vals.add(norm);
+      else hasBlank = true;
+    });
+    const sorted = Array.from(vals).sort((a, b) => a.localeCompare(b));
+    return hasBlank ? [...sorted, '__BLANK__'] : sorted;
+  }, [repLeads, localEdits, activeTab]);
+
+  const uniqueGestCalls = React.useMemo(() => {
+    const vals = new Set<string>();
+    let hasBlank = false;
+    const baseLeads = activeTab === '__ALL__' ? repLeads : repLeads.filter(l => getLeadSheetTab(l) === activeTab);
+    baseLeads.forEach(l => {
+      const v = (getLeadField(l, 'gestCall') || '').trim();
+      if (v) vals.add(v);
+      else hasBlank = true;
+    });
+    const sorted = Array.from(vals).sort();
+    return hasBlank ? [...sorted, '__BLANK__'] : sorted;
+  }, [leads, localEdits, activeTab]);
+
+  const uniqueEstadosCrm = React.useMemo(() => {
+    const vals = new Set<string>();
+    const baseLeads = activeTab === '__ALL__' ? leads : leads.filter(l => getLeadSheetTab(l) === activeTab);
+    baseLeads.forEach(l => {
+      const v = (getLeadField(l, 'estadoCrm') || 'nuevo').trim();
+      vals.add(v);
+    });
+    return Array.from(vals).sort();
+  }, [leads, localEdits, activeTab]);
+
+  // Filtrado de leads por pestaña activa + búsqueda + filtros de columna (Google Sheets style)
+  const filteredLeads = repLeads.filter(lead => {
+    const leadTab = getLeadSheetTab(lead);
+
+    // Filtrar por pestaña activa (a menos que sea '__ALL__')
+    if (activeTab !== '__ALL__' && leadTab !== activeTab) {
+      return false;
+    }
+
+    // Filtro rápido: Solo No Agendados en Google Contacts
+    if (onlyUnsavedContacts) {
+      const phoneNorm = normalizePhone(getLeadField(lead, 'celular'));
+      const isSaved = phoneNorm ? contactsMap.has(phoneNorm) : false;
+      if (isSaved) {
+        return false;
+      }
+    }
+
+    // Filtros por columna individuales
+    if (columnFilters['distrito']) {
+      const rawDist = (getLeadField(lead, 'distrito') || '').trim();
+      const normDist = normalizeTitleCase(rawDist);
+      const matchKey = normDist === '' ? '__BLANK__' : normDist;
+      if (!columnFilters['distrito'].includes(matchKey)) {
+        return false;
+      }
+    }
+
+    if (columnFilters['gestCall']) {
+      const gestVal = (getLeadField(lead, 'gestCall') || '').trim();
+      const matchKey = gestVal === '' ? '__BLANK__' : gestVal;
+      if (!columnFilters['gestCall'].includes(matchKey)) {
+        return false;
+      }
+    }
+
+    if (columnFilters['estadoCrm']) {
+      const estVal = (getLeadField(lead, 'estadoCrm') || 'nuevo').trim();
+      if (!columnFilters['estadoCrm'].includes(estVal)) {
+        return false;
+      }
+    }
+
+    const term = searchTerm.toLowerCase();
+    if (!term) return true;
+
+    const nombre = (getLeadField(lead, 'nombreMadre') || '').toLowerCase();
+    const celular = (getLeadField(lead, 'celular') || '');
+    const distrito = (getLeadField(lead, 'distrito') || '').toLowerCase();
+    const obs = (getLeadField(lead, 'observaciones') || '').toLowerCase();
+    const gest = (getLeadField(lead, 'gestCall') || '').toLowerCase();
+    const obsCall = (getLeadField(lead, 'obserCalls') || '').toLowerCase();
+
+    return (
+      nombre.includes(term) ||
+      celular.includes(term) ||
+      distrito.includes(term) ||
+      obs.includes(term) ||
+      gest.includes(term) ||
+      obsCall.includes(term)
+    );
+  });
+
+  // Conteo de leads por pestaña
+  const getTabCount = (tabName: string): number => {
+    return repLeads.filter(l => getLeadSheetTab(l) === tabName).length;
+  };
+
+  const exportCSV = () => {
+    if (filteredLeads.length === 0) return;
+    let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
+    csvContent += 'ID,Pestana,Nombre Madre,Celular,Gestion Call,Observaciones Calls,Distrito,Observaciones del Lead,Estado CRM,Fecha,Edad Hijos,Nivel Preocupacion,Conocimiento Dano,Pregunta Condicional,Respuesta Condicional,Interes Solucion\n';
+
+    filteredLeads.forEach(l => {
+      const row = [
+        `"${l.id}"`,
+        `"${getLeadSheetTab(l)}"`,
+        `"${(getLeadField(l, 'nombreMadre') || '').replace(/"/g, '""')}"`,
+        `"${getLeadField(l, 'celular') || ''}"`,
+        `"${(getLeadField(l, 'gestCall') || '').replace(/"/g, '""')}"`,
+        `"${(getLeadField(l, 'obserCalls') || '').replace(/"/g, '""')}"`,
+        `"${(getLeadField(l, 'distrito') || '').replace(/"/g, '""')}"`,
+        `"${(getLeadField(l, 'observaciones') || '').replace(/"/g, '""')}"`,
+        `"${getLeadField(l, 'estadoCrm') || 'nuevo'}"`,
+        `"${l.timestamp || ''}"`,
+        `"${l.edadHijos || ''}"`,
+        `"${l.nivelPreocupacion || ''}"`,
+        `"${(l.conocimientoDano || '').replace(/"/g, '""')}"`,
+        `"${(l.preguntaCondicional || '').replace(/"/g, '""')}"`,
+        `"${(l.respuestaCondicional || '').replace(/"/g, '""')}"`,
+        `"${l.interesSolucion || ''}"`
+      ].join(',');
+      csvContent += row + '\n';
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    const tabSuffix = activeTab === '__ALL__' ? 'Todas_Pestanas' : activeTab.replace(/[^a-zA-Z0-9]/g, '_');
+    link.setAttribute('download', `Leads_${tabSuffix}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const crmStages: { key: LeadData['estadoCrm']; label: string; count: number; color: string }[] = [
+    { key: 'nuevo', label: 'Nuevos Leads', count: filteredLeads.filter(l => (getLeadField(l, 'estadoCrm') || 'nuevo') === 'nuevo').length, color: '#4A90E2' },
+    { key: 'contactado', label: 'Contactados', count: filteredLeads.filter(l => getLeadField(l, 'estadoCrm') === 'contactado').length, color: '#F59E0B' },
+    { key: 'demo_agendada', label: 'Demo Agendada', count: filteredLeads.filter(l => getLeadField(l, 'estadoCrm') === 'demo_agendada').length, color: '#8B5CF6' },
+    { key: 'ganado', label: 'Ventas Cerradas', count: filteredLeads.filter(l => getLeadField(l, 'estadoCrm') === 'ganado').length, color: '#10B981' },
+    { key: 'descartado', label: 'Descartados', count: filteredLeads.filter(l => getLeadField(l, 'estadoCrm') === 'descartado').length, color: '#EF4444' }
+  ];
+
+  const collapsedCount = Object.values(collapsedCols).filter(Boolean).length;
+
+  return (
+    <div
+      className="admin-panel-container"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100vh',
+        background: isDark ? '#0B0F19' : '#F1F5F9',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease'
+      }}
+    >
+      {/* ── Top Fixed Header & Toolbar ────────────────────────────────────── */}
+      <div style={{ padding: '12px 16px 0 16px', flexShrink: 0 }}>
+        {/* ── Header Row ────────────────────────────────────────────────────── */}
+        <div className="admin-header-row" style={{ marginBottom: '8px' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginRight: '6px' }} title={isDark ? 'Vitality Reclutas' : 'Vitality Prospecc'}>
+              <img
+                src={isDark ? '/vitality_symbol_dark.png' : '/vitality_symbol.png'}
+                alt="Vitality"
+                style={{ width: '30px', height: '30px', objectFit: 'contain' }}
+              />
+            </div>
+            {/* Perfil Autenticado con Google o Botón de Ingreso */}
+            {currentUser ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '2px 8px 2px 3px',
+                    borderRadius: '20px',
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                  title={`Conectado: ${currentUser.email} (${userProfile?.role === 'superadmin' ? 'SuperAdmin' : 'Asesor'})`}
+                >
+                  {currentUser.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt={currentUser.displayName || ''}
+                      style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#004D99', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
+                      {(currentUser.displayName || currentUser.email || 'U')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isDark ? '#F8FAFC' : '#1E293B' }}>
+                    {currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'Usuario'}
+                  </span>
+                  <span style={{
+                    fontSize: '0.62rem',
+                    fontWeight: 800,
+                    padding: '1px 5px',
+                    borderRadius: '8px',
+                    background: userProfile?.role === 'superadmin' ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#EFF6FF') : (isDark ? 'rgba(245, 158, 11, 0.25)' : '#FEF3C7'),
+                    color: userProfile?.role === 'superadmin' ? (isDark ? '#60A5FA' : '#004D99') : (isDark ? '#FBBF24' : '#92400E')
+                  }}>
+                    {userProfile?.role === 'superadmin' ? 'Admin' : 'Asesor'}
+                  </span>
+                </div>
+
+                {/* Sincronizador de Agenda Google Contacts */}
+                <button
+                  type="button"
+                  onClick={() => handleSyncContacts()}
+                  disabled={isSyncingContacts}
+                  style={{
+                    border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    color: isDark ? '#60A5FA' : '#004D99',
+                    borderRadius: '20px',
+                    padding: '3px 7px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Sincronizar contactos"
+                >
+                  <span style={{ display: 'inline-flex', animation: isSyncingContacts ? 'spin 1s linear infinite' : 'none' }}>
+                    <Icons.Refresh />
+                  </span>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800 }}>({contactsMap.size})</span>
+                </button>
+
+                {/* Salir */}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: isDark ? '#94A3B8' : '#64748B',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    padding: '2px 4px'
+                  }}
+                  title="Cerrar sesión"
+                >
+                  Salir
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isAuthLoading}
+                style={{
+                  background: isDark ? '#1E293B' : '#FFFFFF',
+                  color: isDark ? '#F8FAFC' : '#1E293B',
+                  border: isDark ? '1.5px solid #334155' : '1.5px solid #CBD5E1',
+                  borderRadius: '20px',
+                  padding: '3px 12px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  transition: 'all 0.2s ease'
+                }}
+                title="Conectar con tu cuenta de Google para verificar contactos agendados"
+              >
+                <Icons.Google />
+                <span>{isAuthLoading ? 'Conectando...' : 'Conectar Google'}</span>
+              </button>
+            )}
+
+            {/* Filtro de Asesor (Exclusivo SuperAdmin, sin selector obsoleto) */}
+            {/* Selector de Vista de Asesor / Consolidado (Exclusivo SuperAdmin) */}
+            {Boolean(currentUser && userProfile?.role === 'superadmin') && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: isDark ? '#1E293B' : '#F1F5F9', padding: '2px 4px', borderRadius: '16px', border: isDark ? '1px solid #334155' : '1px solid #CBD5E1' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: isDark ? '#94A3B8' : '#64748B', padding: '0 4px' }}>Vista:</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRep('ALL')}
+                  style={{
+                    background: selectedRep === 'ALL' ? (isDark ? '#3B82F6' : '#004D99') : 'transparent',
+                    color: selectedRep === 'ALL' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#475569'),
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '2px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: selectedRep === 'ALL' ? 700 : 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRep('Jose Angel')}
+                  style={{
+                    background: selectedRep === 'Jose Angel' ? (isDark ? '#3B82F6' : '#004D99') : 'transparent',
+                    color: selectedRep === 'Jose Angel' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#475569'),
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '2px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: selectedRep === 'Jose Angel' ? 700 : 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  José Angel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRep('Ricfel')}
+                  style={{
+                    background: selectedRep === 'Ricfel' ? (isDark ? '#F59E0B' : '#D97706') : 'transparent',
+                    color: selectedRep === 'Ricfel' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#475569'),
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '2px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: selectedRep === 'Ricfel' ? 700 : 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Ricfel
+                </button>
+              </div>
+            )}
+            
+          </div>
+        </div>
+
+        {/* Action Controls */}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* View mode toggle: 3 Full-Screen Views */}
+          <div style={{ display: 'flex', background: isDark ? '#1E293B' : '#E2E8F0', padding: '2px', borderRadius: '8px', gap: '2px', border: isDark ? '1px solid #334155' : 'none', transition: 'all 0.25s ease' }}>
+            <button
+              onClick={() => setViewMode('spreadsheet')}
+              style={{
+                border: 'none',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.78rem',
+                background: viewMode === 'spreadsheet' ? (isDark ? '#0F172A' : '#FFFFFF') : 'transparent',
+                color: viewMode === 'spreadsheet' ? (isDark ? '#60A5FA' : '#004D99') : (isDark ? '#94A3B8' : '#64748B'),
+                boxShadow: viewMode === 'spreadsheet' ? (isDark ? '0 1px 3px rgba(0,0,0,0.4)' : '0 1px 3px rgba(0,0,0,0.1)') : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Icons.Table />
+              <span>Spreadsheet</span>
+            </button>
+            <button
+              onClick={() => setViewMode('crm')}
+              style={{
+                border: 'none',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.78rem',
+                background: viewMode === 'crm' ? (isDark ? '#0F172A' : '#FFFFFF') : 'transparent',
+                color: viewMode === 'crm' ? (isDark ? '#60A5FA' : '#004D99') : (isDark ? '#94A3B8' : '#64748B'),
+                boxShadow: viewMode === 'crm' ? (isDark ? '0 1px 3px rgba(0,0,0,0.4)' : '0 1px 3px rgba(0,0,0,0.1)') : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Icons.Kanban />
+              <span>Kanban</span>
+            </button>
+                        <button
+              onClick={() => setViewMode('campaigns')}
+              style={{
+                border: 'none',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                background: viewMode === 'campaigns' ? '#10B981' : 'transparent',
+                color: viewMode === 'campaigns' ? '#FFFFFF' : '#059669',
+                boxShadow: viewMode === 'campaigns' ? '0 1px 3px rgba(16,185,129,0.28)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+              title="Vista de Campañas WhatsApp"
+            >
+              <Icons.MessageCircle />
+              <span>Campañas</span>
+              {selectedLeadIds.length > 0 && (
+                <span
+                  style={{
+                    background: viewMode === 'campaigns' ? '#FFFFFF' : '#10B981',
+                    color: viewMode === 'campaigns' ? '#059669' : '#FFFFFF',
+                    borderRadius: '10px',
+                    padding: '0 6px',
+                    fontSize: '0.68rem',
+                    fontWeight: 800
+                  }}
+                >
+                  {selectedLeadIds.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              style={{
+                border: 'none',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.78rem',
+                background: viewMode === 'calendar' ? (isDark ? '#0F172A' : '#FFFFFF') : 'transparent',
+                color: viewMode === 'calendar' ? (isDark ? '#60A5FA' : '#004D99') : (isDark ? '#94A3B8' : '#64748B'),
+                boxShadow: viewMode === 'calendar' ? (isDark ? '0 1px 3px rgba(0,0,0,0.4)' : '0 1px 3px rgba(0,0,0,0.1)') : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease'
+              }}
+              title="Vista de calendario"
+            >
+              <Icons.Calendar />
+              <span>Calendario</span>
+            </button>
+          </div>
+
+          {/* Toggle Expand all texts button (SVG only) */}
+          {viewMode === 'spreadsheet' && (
+            <button
+              onClick={() => setExpandAllTexts(!expandAllTexts)}
+              style={{
+                background: expandAllTexts 
+                  ? (isDark ? 'rgba(59, 130, 246, 0.2)' : '#F0F5FA') 
+                  : (isDark ? '#1E293B' : '#FFFFFF'),
+                color: isDark ? '#60A5FA' : '#004D99',
+                border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                borderRadius: '8px',
+                padding: '6px 8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease'
+              }}
+              title={expandAllTexts ? 'Contraer textos' : 'Expandir textos'}
+            >
+              {expandAllTexts ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+            </button>
+          )}
+
+          {/* Export CSV button (CRM Standard) */}
+          <button
+            onClick={exportCSV}
+            style={{
+              background: isDark ? '#1E293B' : '#FFFFFF',
+              color: isDark ? '#E2E8F0' : '#334155',
+              border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+              borderRadius: '8px',
+              padding: '6px 8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            title="Descargar CSV"
+          >
+            <Icons.Download />
+          </button>
+
+          {/* Export Google Contacts CSV button */}
+          
+
+          {/* PWA Install Button */}
+          <InstallAppButton variant="admin-icon" isDark={isDark} />
+
+          {/* Back to Prospecc button (SVG only) */}
+          <button
+            onClick={onClose}
+            style={{
+              background: '#004D99',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '6px 8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 5px rgba(37,99,235,0.25)'
+            }}
+            title="Volver al formulario"
+          >
+            <Icons.ArrowLeft />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Filter & Columns Toolbar ──────────────────────────────────────── */}
+      {viewMode !== 'campaigns' && viewMode !== 'calendar' && (
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Search Input */}
+        <div style={{ position: 'relative', flex: '1', minWidth: '240px' }}>
+          <div style={{ position: 'absolute', left: '10px', top: '10px', color: '#94A3B8' }}>
+            <Icons.Search />
+          </div>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={`Buscar en ${activeTab === '__ALL__' ? 'todas las pestañas' : activeTab}...`}
+            style={{
+              width: '100%',
+              padding: '8px 10px 8px 34px',
+              borderRadius: '8px',
+              border: isDark ? '1px solid #334155' : '1px solid #CBD5E1', background: isDark ? '#1E293B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#1E293B', outline: 'none', fontSize: '0.85rem'
+            }}
+          />
+        </div>
+
+        {/* Toggle Filtro: Solo No Agendados */}
+        <button
+          type="button"
+          onClick={() => setOnlyUnsavedContacts(!onlyUnsavedContacts)}
+          style={{
+            border: onlyUnsavedContacts 
+              ? '1.5px solid #F59E0B' 
+              : (isDark ? '1px solid #334155' : '1px solid #CBD5E1'),
+            background: onlyUnsavedContacts 
+              ? (isDark ? 'rgba(245, 158, 11, 0.25)' : '#FEF3C7') 
+              : (isDark ? '#1E293B' : '#FFFFFF'),
+            color: onlyUnsavedContacts 
+              ? (isDark ? '#FBBF24' : '#B45309') 
+              : (isDark ? '#94A3B8' : '#64748B'),
+            borderRadius: '8px',
+            padding: '6px 12px',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            transition: 'all 0.2s ease'
+          }}
+          title={onlyUnsavedContacts ? 'Mostrando solo contactos no agendados (clic para ver todos)' : 'Filtrar para ver únicamente prospectos que no están en tu agenda'}
+        >
+          <Icons.ContactUnsaved />
+          <span>{onlyUnsavedContacts ? 'Filtro: No Agendados' : 'Solo No Agendados'}</span>
+        </button>
+
+        {/* Active Column Filters Indicator & Reset */}
+        {Object.keys(columnFilters).length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.78rem', color: '#004D99', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Icons.Filter />
+              <span>Filtros activos ({Object.keys(columnFilters).length})</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setColumnFilters({})}
+              style={{
+                background: '#F0F5FA',
+                border: '1px solid #A3C7EB',
+                color: '#003870',
+                borderRadius: '6px',
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              title="Limpiar todos los filtros de columnas"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        )}
+
+        {/* Column Visibility Menu */}
+        {viewMode === 'spreadsheet' && (
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setIsColMenuOpen(!isColMenuOpen)}
+              style={{
+                background: collapsedCount > 0 
+                  ? (isDark ? 'rgba(59, 130, 246, 0.2)' : '#F0F5FA') 
+                  : (isDark ? '#1E293B' : '#FFFFFF'),
+                color: collapsedCount > 0 
+                  ? (isDark ? '#60A5FA' : '#004D99') 
+                  : (isDark ? '#E2E8F0' : '#475569'),
+                border: isDark 
+                  ? `1.5px solid ${collapsedCount > 0 ? '#2563EB' : '#334155'}` 
+                  : `1.5px solid ${collapsedCount > 0 ? '#93C5FD' : '#CBD5E1'}`,
+                borderRadius: '8px',
+                padding: '7px 12px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease'
+              }}
+              title="Ocultar o mostrar columnas de la tabla (como en Excel)"
+            >
+              <Icons.Columns />
+              <span>Columnas {collapsedCount > 0 ? `(${15 - collapsedCount}/15)` : ''}</span>
+              <Icons.ChevronDown />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isColMenuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '110%',
+                  background: isDark ? '#1E293B' : 'white',
+                  borderRadius: '10px',
+                  boxShadow: isDark ? '0 15px 35px rgba(0,0,0,0.6)' : '0 10px 30px rgba(0,0,0,0.15)',
+                  border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
+                  padding: '12px',
+                  zIndex: 50,
+                  minWidth: '240px',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid #F1F5F9' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: isDark ? '#F8FAFC' : '#1E293B' }}>Columnas Visibles</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsColMenuOpen(false)}
+                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94A3B8', fontSize: '0.8rem' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Presets */}
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('crm')}
+                    style={{ 
+                      flex: 1, 
+                      padding: '4px', 
+                      fontSize: '0.7rem', 
+                      fontWeight: 600, 
+                      background: isDark ? 'rgba(59, 130, 246, 0.2)' : '#F0F5FA', 
+                      color: isDark ? '#60A5FA' : '#004D99', 
+                      border: isDark ? '1px solid #2563EB' : '1px solid #A3C7EB', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    Solo CRM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('stand')}
+                    style={{ 
+                      flex: 1, 
+                      padding: '4px', 
+                      fontSize: '0.7rem', 
+                      fontWeight: 600, 
+                      background: isDark ? 'rgba(16, 185, 129, 0.2)' : '#F0FDF4', 
+                      color: isDark ? '#34D399' : '#16A34A', 
+                      border: isDark ? '1px solid #059669' : '1px solid #BBF7D0', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    Solo Stand
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('all')}
+                    style={{ 
+                      flex: 1, 
+                      padding: '4px', 
+                      fontSize: '0.7rem', 
+                      fontWeight: 600, 
+                      background: isDark ? '#0B0F19' : '#F8FAFC', 
+                      color: isDark ? '#CBD5E1' : '#475569', 
+                      border: isDark ? '1px solid #334155' : '1px solid #E2E8F0', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    Ver Todo
+                  </button>
+                </div>
+
+                {/* List of individual columns */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {COLUMNS.map(col => {
+                    const isHidden = isColCollapsed(col.key);
+                    return (
+                      <label
+                        key={col.key}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '4px 6px',
+                          borderRadius: '4px',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          background: isHidden 
+                            ? (isDark ? '#0B0F19' : '#F8FAFC') 
+                            : (isDark ? '#1E293B' : 'white'),
+                          color: isHidden 
+                            ? (isDark ? '#64748B' : '#94A3B8') 
+                            : (isDark ? '#F8FAFC' : '#1E293B'),
+                          userSelect: 'none'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!isHidden}
+                          onChange={() => toggleCol(col.key)}
+                          style={{ cursor: 'pointer', accentColor: '#004D99' }}
+                        />
+                        <span>{col.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      )}
+      </div>
+
+      {/* ── Middle Scrollable Content Area ─────────────────────────────────── */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '0 16px', overflow: 'hidden' }}>
+        {/* ── VIEW 1: SPREADSHEET TABLE ─────────────────────────────────────── */}
+        {viewMode === 'spreadsheet' && (
+          <div
+            style={{
+              background: isDark ? '#0B0F19' : 'white',
+              borderRadius: '10px 10px 0 0',
+              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 2px 12px rgba(0,0,0,0.04)',
+              overflow: 'auto',
+              flex: 1,
+              minHeight: 0,
+              border: isDark ? '1px solid #1E293B' : '1px solid #CBD5E1',
+              borderBottom: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'background-color 0.25s ease, border-color 0.25s ease'
+            }}
+          >
+            <table className="spreadsheet-table" style={{ width: '100%', minWidth: '100%', borderCollapse: 'collapse', background: isDark ? '#0B0F19' : '#FFFFFF', color: isDark ? '#F1F5F9' : 'inherit', transition: 'background-color 0.25s ease' }}>
+            <thead>
+              <tr>
+                <th style={{ width: '36px', minWidth: '36px', textAlign: 'center', background: isDark ? '#111827' : '#F8FAFC', borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1', transition: 'background-color 0.25s ease' }}>
+                  <input
+                    type="checkbox"
+                    checked={filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const next = new Set(selectedLeadIds);
+                        filteredLeads.forEach(l => next.add(l.id));
+                        setSelectedLeadIds(Array.from(next));
+                      } else {
+                        const filteredSet = new Set(filteredLeads.map(l => l.id));
+                        setSelectedLeadIds(prev => prev.filter(id => !filteredSet.has(id)));
+                      }
+                    }}
+                    style={{ cursor: 'pointer', accentColor: '#10B981' }}
+                    title="Seleccionar / deseleccionar leads visibles para Campaña WhatsApp"
+                  />
+                </th>
+                {COLUMNS.map(col => {
+                  const isHidden = isColCollapsed(col.key);
+
+                  if (isHidden) {
+                    return (
+                      <th
+                        key={col.key}
+                        onClick={() => toggleCol(col.key)}
+                        style={{
+                          width: '28px',
+                          minWidth: '28px',
+                          maxWidth: '32px',
+                          padding: '8px 2px',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          background: isDark ? '#111827' : '#F1F5F9',
+                          borderLeft: isDark ? '2px solid #334155' : '2px solid #CBD5E1',
+                          borderRight: isDark ? '2px solid #334155' : '2px solid #CBD5E1',
+                          color: isDark ? '#60A5FA' : '#004D99',
+                          borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1'
+                        }}
+                        title={`Expandir columna: ${col.label} (clic para ver)`}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                          <Icons.PlusSquare />
+                        </div>
+                      </th>
+                    );
+                  }
+
+                    const isFilterable = col.key === 'gestCall' || col.key === 'distrito' || col.key === 'estadoCrm';
+                    const hasActiveFilter = !!columnFilters[col.key];
+                    const isFilterOpen = activeFilterCol === col.key;
+
+                    let uniqueVals: string[] = [];
+                    let initialSelected: string[] = [];
+                    let renderLabel: ((val: string) => React.ReactNode) | undefined = undefined;
+
+                    if (col.key === 'distrito') {
+                      uniqueVals = uniqueDistritos;
+                      initialSelected = columnFilters['distrito'] || uniqueDistritos;
+                    } else if (col.key === 'gestCall') {
+                      uniqueVals = uniqueGestCalls;
+                      initialSelected = columnFilters['gestCall'] || uniqueGestCalls;
+                      renderLabel = (val: string) => {
+                        if (val === '__BLANK__') return <em style={{ color: '#94A3B8' }}>(Sin registrar)</em>;
+                        const opt = CALL_STATUS_OPTIONS.find(o => o.code === val);
+                        return opt ? `${opt.code} - ${opt.label}` : val;
+                      };
+                    } else if (col.key === 'estadoCrm') {
+                      uniqueVals = uniqueEstadosCrm;
+                      initialSelected = columnFilters['estadoCrm'] || uniqueEstadosCrm;
+                      renderLabel = (val: string) => {
+                        const labels: Record<string, string> = {
+                          nuevo: '📥 Nuevo',
+                          contactado: '📞 Contactado',
+                          demo_agendada: '📅 Demo Agendada',
+                          ganado: '🏆 Ganado',
+                          descartado: '🚫 Descartado'
+                        };
+                        return labels[val] || val;
+                      };
+                    }
+
+                    return (
+                      <th
+                        key={col.key}
+                        style={{
+                          minWidth: col.minWidth || '120px',
+                          background: hasActiveFilter 
+                            ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#F0F5FA') 
+                            : (isDark ? '#111827' : (col.headerBg || '#F8FAFC')),
+                          color: isDark ? '#F1F5F9' : 'inherit',
+                          borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1',
+                          position: 'relative',
+                          transition: 'background-color 0.25s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                          <span style={{ color: hasActiveFilter ? (isDark ? '#93C5FD' : '#003870') : (isDark ? '#E2E8F0' : 'inherit'), fontWeight: hasActiveFilter ? 800 : 700 }}>
+                            {col.label}
+                          </span>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            {isFilterable && (
+                              <button
+                                ref={(el) => { filterBtnRefs.current[col.key] = el; }}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveFilterCol(isFilterOpen ? null : col.key);
+                                }}
+                                style={{
+                                  border: hasActiveFilter ? (isDark ? '1px solid #2563EB' : '1px solid #93C5FD') : 'none',
+                                  background: hasActiveFilter ? (isDark ? 'rgba(59, 130, 246, 0.3)' : '#D1E2F5') : 'transparent',
+                                  cursor: 'pointer',
+                                  color: hasActiveFilter ? (isDark ? '#93C5FD' : '#003870') : (isDark ? '#64748B' : '#94A3B8'),
+                                  padding: '2px 4px',
+                                  borderRadius: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  transition: 'all 0.15s'
+                                }}
+                                title={`Filtrar por ${col.label} (estilo Google Sheets)`}
+                              >
+                                <Icons.Filter />
+                              </button>
+                            )}
+
+                            {col.key !== 'acciones' && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleCol(col.key);
+                                }}
+                                style={{
+                                  border: 'none',
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  color: '#94A3B8',
+                                  padding: '2px 4px',
+                                  borderRadius: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center'
+                                }}
+                                title={`Retraer columna ${col.label}`}
+                              >
+                                <Icons.MinusSquare />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Popover de Filtro Google Sheets */}
+                        {isFilterable && isFilterOpen && (
+                          <ColumnFilterPopover
+                            columnKey={col.key as 'gestCall' | 'distrito' | 'estadoCrm'}
+                            columnLabel={col.label}
+                            uniqueValues={uniqueVals}
+                            selectedValues={initialSelected}
+                            triggerRef={{ current: filterBtnRefs.current[col.key] || null }}
+                            onApply={(selected) => {
+                              if (selected.length === uniqueVals.length) {
+                                // Todos seleccionados = sin filtro activo en esta columna
+                                setColumnFilters(prev => {
+                                  const next = { ...prev };
+                                  delete next[col.key];
+                                  return next;
+                                });
+                              } else {
+                                setColumnFilters(prev => ({
+                                  ...prev,
+                                  [col.key]: selected
+                                }));
+                              }
+                            }}
+                            onClose={() => setActiveFilterCol(null)}
+                            renderValueLabel={renderLabel}
+                            isDark={isDark}
+                          />
+                        )}
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+
+            <tbody>
+              {filteredLeads.length === 0 ? (
+                <tr>
+                  <td colSpan={16} style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>No hay prospectos en la pestaña "{activeTab === '__ALL__' ? 'Todas' : activeTab}".</div>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '4px' }}>
+                      Puedes registrar nuevos leads con el formulario seleccionando esta pestaña o mover prospectos desde otra pestaña.
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredLeads.map((lead) => {
+                  const cleanPhone = (getLeadField(lead, 'celular') || '').replace(/\D/g, '');
+                  const waUrl = `https://wa.me/51${cleanPhone}?text=${encodeURIComponent(`Hola ${getLeadField(lead, 'nombreMadre')}, te saluda el equipo de VitalityOS. Un gusto saludarte tras la Expo Maternidad.`)}`;
+
+                  const currentGestCall = getLeadField(lead, 'gestCall') || '';
+                  const currentObserCalls = getLeadField(lead, 'obserCalls') || '';
+                  const leadHistory = getLeadHistory(lead);
+                  const leadTab = getLeadSheetTab(lead);
+                  const isRowSelected = selectedLeadIds.includes(lead.id);
+
+                  const rowBg = isRowSelected 
+                    ? (isDark ? 'rgba(16, 185, 129, 0.2)' : '#ECFDF5') 
+                    : (isDark ? (leads.indexOf(lead) % 2 === 0 ? '#0B0F19' : '#0E1422') : (leads.indexOf(lead) % 2 === 0 ? '#FFFFFF' : '#FAFAFA'));
+
+                  return (
+                    <tr 
+                      key={lead.id} 
+                      style={{ 
+                        background: rowBg,
+                        borderBottom: isDark ? '1px solid #1E293B' : '1px solid #E2E8F0',
+                        transition: 'background-color 0.15s ease'
+                      }}
+                    >
+                      <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                        <input
+                          type="checkbox"
+                          checked={isRowSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLeadIds(prev => [...prev, lead.id]);
+                            } else {
+                              setSelectedLeadIds(prev => prev.filter(id => id !== lead.id));
+                            }
+                          }}
+                          style={{ cursor: 'pointer', accentColor: '#10B981' }}
+                          title="Seleccionar este prospecto para Campaña WhatsApp"
+                        />
+                      </td>
+                      {/* 1. Nombre Madre + Selector de Pestaña para traspaso */}
+                      {isColCollapsed('nombreMadre') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td style={{ verticalAlign: 'top' }}>
+                          <EditableCell
+                            leadId={lead.id}
+                            field="nombreMadre"
+                            value={getLeadField(lead, 'nombreMadre')}
+                            onSave={handleSaveField}
+                            maxChars={25}
+                            forceExpandAll={expandAllTexts}
+                            fullWidth={false}
+                            placeholder="Nombre..."
+                            style={{ fontWeight: 600, color: isDark ? '#F8FAFC' : '#1E293B' }}
+                            isDark={isDark}
+                          />
+                          {/* Mini Selector de Pestaña para traspasar el lead */}
+                          <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '0.65rem', color: isDark ? '#64748B' : '#94A3B8' }}>Pestaña:</span>
+                            <select
+                              value={leadTab}
+                              onChange={(e) => handleMoveLeadToTab(lead.id, e.target.value)}
+                              style={{
+                                fontSize: '0.68rem',
+                                padding: '1px 4px',
+                                borderRadius: '4px',
+                                border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                                background: isDark ? '#1E293B' : '#F8FAFC',
+                                color: isDark ? '#60A5FA' : '#004D99',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                outline: 'none',
+                                transition: 'all 0.15s ease'
+                              }}
+                              title="Traspasar este lead a otra pestaña"
+                            >
+                              {sheetTabs.map(t => (
+                                <option key={t} value={t}>{t}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </td>
+                      )}
+
+                      {/* 2. Celular / WhatsApp + Indicador SVG de Agenda */}
+                      {isColCollapsed('celular') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (() => {
+                        const rawPhone = getLeadField(lead, 'celular') || '';
+                        const phoneNorm = normalizePhone(rawPhone);
+                        const matchedContact = phoneNorm ? contactsMap.get(phoneNorm) : undefined;
+                        const isSaved = !!matchedContact;
+
+                        return (
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {/* Indicador Visual SVG Sin Texto: Verde (Agendado) / Amarillo (No Agendado) */}
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'help'
+                                }}
+                                title={isSaved ? `Agendado: ${matchedContact.name}` : 'No agendado en contactos'}
+                              >
+                                {isSaved ? <Icons.ContactSaved /> : <Icons.ContactUnsaved />}
+                              </span>
+
+                              <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem', color: isDark ? '#E2E8F0' : 'inherit' }}>
+                                {rawPhone}
+                              </span>
+
+                              {cleanPhone && (
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{ color: '#10B981', display: 'inline-flex' }}
+                                  title="Chat WhatsApp"
+                                >
+                                  <Icons.MessageCircle />
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })()}
+
+                      {/* 3. Gestión Call (Selector minimalista + Botón Check + Historial 1/2 clics) */}
+                      {isColCollapsed('gestCall') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td style={{ background: isDark ? 'rgba(59, 130, 246, 0.12)' : '#F0F5FA', verticalAlign: 'middle', transition: 'background-color 0.25s ease' }}>
+                          <GestCallCell
+                            lead={lead}
+                            currentCode={currentGestCall}
+                            history={leadHistory}
+                            onConfirmCode={(code) => handleRegisterCallLog(lead.id, code)}
+                            onOpenHistory={(targetLead, mode) => {
+                              setActiveHistoryModal({ lead: targetLead, mode });
+                            }}
+                            isDark={isDark}
+                          />
+                        </td>
+                      )}
+
+                      {/* 4. Observaciones Calls */}
+                      {isColCollapsed('obserCalls') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', verticalAlign: 'top', transition: 'background-color 0.25s ease' }}>
+                          <EditableCell
+                            leadId={lead.id}
+                            field="obserCalls"
+                            value={currentObserCalls}
+                            onSave={async (lid, f, val) => {
+                              await handleSaveField(lid, f, val);
+                              const targetLead = leads.find(l => l.id === lid);
+                              if (targetLead) {
+                                const hist = getLeadHistory(targetLead);
+                                if (hist.length > 0) {
+                                  hist[0].observation = val;
+                                  setLocalEdits(prev => ({
+                                    ...prev,
+                                    [lid]: {
+                                      ...(prev[lid] || {}),
+                                      callHistory: [...hist]
+                                    }
+                                  }));
+                                  try {
+                                    await updateDoc(doc(db, LEADS_COLLECTION, lid), {
+                                      callHistory: hist
+                                    });
+                                  } catch (e) {}
+                                }
+                              }
+                            }}
+                            style={{ color: isDark ? '#2DD4BF' : '#0F766E', fontSize: '0.82rem' }}
+                            isDark={isDark}
+                            maxChars={100}
+                            forceExpandAll={expandAllTexts}
+                            fullWidth={true}
+                            placeholder="Observaciones de la llamada..."
+                          />
+                        </td>
+                      )}
+
+                      {/* 5. Distrito */}
+                      {isColCollapsed('distrito') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td>
+                          <EditableCell
+                            leadId={lead.id}
+                            field="distrito"
+                            value={getLeadField(lead, 'distrito')}
+                            onSave={handleSaveField}
+                            maxChars={20}
+                            forceExpandAll={expandAllTexts}
+                            fullWidth={false}
+                            placeholder="Distrito..."
+                            style={{ color: isDark ? '#CBD5E1' : 'inherit' }}
+                            isDark={isDark}
+                          />
+                        </td>
+                      )}
+
+                      {/* 6. Observaciones del Lead */}
+                      {isColCollapsed('observaciones') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td style={{ verticalAlign: 'top' }}>
+                          <EditableCell
+                            leadId={lead.id}
+                            field="observaciones"
+                            value={getLeadField(lead, 'observaciones')}
+                            onSave={handleSaveField}
+                            style={{ fontStyle: 'italic', color: isDark ? '#94A3B8' : '#475569' }}
+                            maxChars={100}
+                            forceExpandAll={expandAllTexts}
+                            fullWidth={true}
+                            placeholder="Observaciones del lead..."
+                            isDark={isDark}
+                          />
+                        </td>
+                      )}
+
+                      {/* 7. Estado CRM */}
+                      {isColCollapsed('estadoCrm') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td>
+                          <select
+                            value={getLeadField(lead, 'estadoCrm') || 'nuevo'}
+                            onChange={(e) => handleUpdateStatus(lead.id, e.target.value as LeadData['estadoCrm'])}
+                            style={{
+                              fontSize: '0.75rem',
+                              padding: '4px 6px',
+                              borderRadius: '6px',
+                              border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                              background: isDark ? '#1E293B' : '#F8FAFC',
+                              fontWeight: 600,
+                              color: isDark ? '#F1F5F9' : '#334155',
+                              cursor: 'pointer',
+                              outline: 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <option value="nuevo">📥 Nuevo</option>
+                            <option value="contactado">📞 Contactado</option>
+                            <option value="demo_agendada">📅 Demo Agendada</option>
+                            <option value="ganado">🏆 Ganado</option>
+                            <option value="descartado">🚫 Descartado</option>
+                          </select>
+                        </td>
+                      )}
+
+                      {/* 8. Fecha */}
+                      {isColCollapsed('timestamp') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td style={{ whiteSpace: 'nowrap', fontSize: '0.78rem', color: isDark ? '#94A3B8' : '#64748B' }}>
+                          {lead.timestamp}
+                        </td>
+                      )}
+
+                      {/* 9. Edad Hijos */}
+                      {isColCollapsed('edadHijos') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              background: lead.edadHijos?.includes('Menores') 
+                                ? (isDark ? 'rgba(59, 130, 246, 0.2)' : '#F0F5FA') 
+                                : (lead.edadHijos?.includes('Mayores') 
+                                  ? (isDark ? 'rgba(236, 72, 153, 0.2)' : '#FDF2F8') 
+                                  : (isDark ? 'rgba(16, 185, 129, 0.2)' : '#F0FDF4')),
+                              color: lead.edadHijos?.includes('Menores') 
+                                ? (isDark ? '#60A5FA' : '#004D99') 
+                                : (lead.edadHijos?.includes('Mayores') 
+                                  ? (isDark ? '#F472B6' : '#DB2777') 
+                                  : (isDark ? '#34D399' : '#16A34A')),
+                              border: isDark ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                              fontWeight: 600
+                            }}
+                          >
+                            {lead.edadHijos}
+                          </span>
+                        </td>
+                      )}
+
+                      {/* 10. Nivel Preocupación */}
+                      {isColCollapsed('nivelPreocupacion') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td style={{ textAlign: 'center', fontWeight: 700, color: Number(lead.nivelPreocupacion) >= 8 ? '#EF4444' : '#F59E0B' }}>
+                          {lead.nivelPreocupacion}
+                        </td>
+                      )}
+
+                      {/* 11. Conocimiento Daño */}
+                      {isColCollapsed('conocimientoDano') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td>
+                          <ExpandableText
+                            text={lead.conocimientoDano}
+                            maxChars={35}
+                            forceExpandAll={expandAllTexts}
+                            fullWidth={true}
+                            style={{ color: isDark ? '#CBD5E1' : 'inherit' }}
+                            isDark={isDark}
+                          />
+                        </td>
+                      )}
+
+                      {/* 12. Pregunta Condicional */}
+                      {isColCollapsed('preguntaCondicional') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td>
+                          <ExpandableText
+                            text={lead.preguntaCondicional}
+                            maxChars={35}
+                            forceExpandAll={expandAllTexts}
+                            fullWidth={true}
+                            style={{ color: isDark ? '#94A3B8' : '#64748B' }}
+                            isDark={isDark}
+                          />
+                        </td>
+                      )}
+
+                      {/* 13. Respuesta Condicional */}
+                      {isColCollapsed('respuestaCondicional') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td>
+                          <ExpandableText
+                            text={lead.respuestaCondicional}
+                            maxChars={25}
+                            forceExpandAll={expandAllTexts}
+                            fullWidth={true}
+                            style={{ fontWeight: 500, color: isDark ? '#F8FAFC' : 'inherit' }}
+                            isDark={isDark}
+                          />
+                        </td>
+                      )}
+
+                      {/* 14. Interés Solución */}
+                      {isColCollapsed('interesSolucion') ? (
+                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
+                      ) : (
+                        <td>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              color: lead.interesSolucion === 'Sí' || lead.interesSolucion === 'Si' ? '#16A34A' : '#DC2626'
+                            }}
+                          >
+                            {lead.interesSolucion}
+                          </span>
+                        </td>
+                      )}
+
+                      {/* 15. Acciones */}
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(lead.id)}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#EF4444',
+                            cursor: 'pointer',
+                            padding: '4px'
+                          }}
+                          title="Eliminar Lead"
+                        >
+                          <Icons.Trash2 />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── VIEW 2: CRM KANBAN PIPELINE ───────────────────────────────────── */}
+      {viewMode === 'crm' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', flex: 1, overflowY: 'auto' }}>
+          {crmStages.map(stage => {
+            const stageLeads = filteredLeads.filter(l => (getLeadField(l, 'estadoCrm') || 'nuevo') === stage.key);
+            return (
+              <div
+                key={stage.key}
+                style={{
+                  background: isDark ? '#0F172A' : '#FFFFFF',
+                  borderRadius: '12px',
+                  border: isDark ? '1.5px solid #1E293B' : '1.5px solid #E2E8F0',
+                  borderTop: `4px solid ${stage.color}`,
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  maxHeight: '75vh',
+                  transition: 'all 0.25s ease'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #F1F5F9' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#F8FAFC' : '#1E293B' }}>{stage.label}</span>
+                  <span style={{ background: isDark ? '#1E293B' : '#F1F5F9', color: isDark ? '#CBD5E1' : '#475569', fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '10px' }}>
+                    {stageLeads.length}
+                  </span>
+                </div>
+
+                <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                  {stageLeads.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94A3B8', fontSize: '0.8rem', border: '1px dashed #E2E8F0', borderRadius: '8px' }}>
+                      Sin prospectos
+                    </div>
+                  ) : (
+                    stageLeads.map(lead => {
+                      const cleanPhone = (getLeadField(lead, 'celular') || '').replace(/\D/g, '');
+                      const waUrl = `https://wa.me/51${cleanPhone}?text=${encodeURIComponent(`Hola ${getLeadField(lead, 'nombreMadre')}, te saluda el equipo de VitalityOS. Te contactamos sobre lo conversado en la Expo Maternidad.`)}`;
+
+                      const gestCallVal = getLeadField(lead, 'gestCall');
+                      const gestOpt = CALL_STATUS_OPTIONS.find(o => o.code === gestCallVal || o.label === gestCallVal);
+                      const leadTab = getLeadSheetTab(lead);
+
+                      return (
+                        <div
+                          key={lead.id}
+                          style={{
+                            background: isDark ? '#1E293B' : '#F8FAFC',
+                            border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
+                            borderRadius: '8px',
+                            padding: '10px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                              <strong style={{ fontSize: '0.88rem', color: isDark ? '#F8FAFC' : '#0F172A', display: 'block' }}>{getLeadField(lead, 'nombreMadre')}</strong>
+                              <span style={{ fontSize: '0.68rem', color: '#004D99', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                {leadTab}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '0.72rem', color: '#EF4444', fontWeight: 700 }}>Dolor: {lead.nivelPreocupacion}/10</span>
+                          </div>
+
+                          <div style={{ fontSize: '0.78rem', color: '#64748B', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                              <span>{getLeadField(lead, 'distrito')} • {lead.edadHijos}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <Icons.Phone />
+                              <span>{getLeadField(lead, 'celular')}</span>
+                            </div>
+                          </div>
+
+                          {getLeadField(lead, 'observaciones') && (
+                            <div style={{ fontSize: '0.75rem', color: '#475569', background: '#FFFFFF', padding: '5px', borderRadius: '4px', border: '1px solid #F1F5F9' }}>
+                              <ExpandableText text={getLeadField(lead, 'observaciones')} maxChars={35} style={{ fontStyle: 'italic' }} />
+                            </div>
+                          )}
+
+                          {gestCallVal && (
+                            <div style={{ fontSize: '0.75rem', color: '#004D99', background: '#F0F5FA', padding: '5px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Icons.Phone />
+                              <span>Gestión: <strong>{gestOpt ? `${gestOpt.code} (${gestOpt.label})` : gestCallVal}</strong></span>
+                            </div>
+                          )}
+
+                          {getLeadField(lead, 'obserCalls') && (
+                            <div style={{ fontSize: '0.75rem', color: '#0F766E', background: '#F0FDFA', padding: '5px', borderRadius: '4px', display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                              <ExpandableText text={getLeadField(lead, 'obserCalls')} maxChars={35} />
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #E2E8F0' }}>
+                            {cleanPhone && (
+                              <a
+                                href={waUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  background: '#10B981',
+                                  color: 'white',
+                                  borderRadius: '6px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  textDecoration: 'none',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                <Icons.MessageCircle />
+                                <span>WhatsApp</span>
+                              </a>
+                            )}
+
+                            <select
+                              value={getLeadField(lead, 'estadoCrm') || 'nuevo'}
+                              onChange={(e) => handleUpdateStatus(lead.id, e.target.value as LeadData['estadoCrm'])}
+                              style={{
+                                fontSize: '0.7rem',
+                                padding: '2px 4px',
+                                borderRadius: '4px',
+                                border: '1px solid #CBD5E1',
+                                background: 'white'
+                              }}
+                            >
+                              <option value="nuevo">Nuevo</option>
+                              <option value="contactado">Contactado</option>
+                              <option value="demo_agendada">Demo</option>
+                              <option value="ganado">Ganado</option>
+                              <option value="descartado">Descartar</option>
+                            </select>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── VIEW 4: GOOGLE CALENDAR VIEW ───────────────────────────────── */}
+      {viewMode === 'calendar' && (
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: isDark ? '#0F172A' : '#FFFFFF', borderRadius: '10px 10px 0 0', overflow: 'hidden', border: isDark ? '1px solid #1E293B' : '1px solid #CBD5E1', borderBottom: 'none' }}>
+          <VitalityCalendarView
+            leads={leads}
+            isDark={isDark}
+            currentUserEmail={currentUser?.email || undefined}
+            onConnectGoogle={handleGoogleLogin}
+          />
+        </div>
+      )}
+
+      {/* ── VIEW 3: CAMPAÑAS WHATSAPP (Full View) ─────────────────────────── */}
+      {viewMode === 'campaigns' && (
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: '10px 10px 0 0', overflow: 'hidden', border: '1px solid #CBD5E1', borderBottom: 'none' }}>
+          <TickToolModal
+            leads={leads}
+            sheetTabs={sheetTabs}
+            preselectedLeadIds={selectedLeadIds}
+            initialSourceTab={activeTab === '__ALL__' ? 'Expo M (JA)' : activeTab}
+            activeSourceTab={activeTab}
+            isStandalone={true}
+            onClose={() => setViewMode('spreadsheet')}
+            onAddManualLead={onUpdateLead}
+          />
+        </div>
+      )}
+      </div>
+
+      {/* ── BARRA INFERIOR DE PESTAÑAS (Estilo Google Sheets / Excel) ──────── */}
+      <div
+        style={{
+          background: isDark ? '#090D16' : '#E2E8F0',
+          borderTop: isDark ? '1px solid #1E293B' : '1px solid #CBD5E1',
+          padding: '6px 16px 0 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          flexShrink: 0,
+          width: '100%',
+          boxSizing: 'border-box',
+          boxShadow: isDark ? '0 -2px 12px rgba(0,0,0,0.4)' : '0 -2px 10px rgba(0,0,0,0.05)',
+          transition: 'background-color 0.25s ease, border-color 0.25s ease'
+        }}
+      >
+        {/* Pestañas a la izquierda */}
+        <div 
+          className="touch-scroll-x"
+          style={{ 
+            display: 'flex', 
+            alignItems: 'flex-end', 
+            gap: '3px', 
+            overflowX: 'auto', 
+            flex: 1, 
+            paddingBottom: '0',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
+          {visibleTabs.map((tab) => {
+            const isActive = activeTab === tab;
+            const count = getTabCount(tab);
+            const isCustom = !DEFAULT_SHEET_TABS.includes(tab);
+            return (
+              <div
+                key={tab}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  background: isActive 
+                    ? (isDark ? '#1E293B' : '#FFFFFF') 
+                    : (isDark ? '#111827' : '#E2E8F0'),
+                  border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                  borderBottom: isActive ? '3px solid #10B981' : 'none',
+                  borderRadius: '6px 6px 0 0',
+                  boxShadow: isActive ? (isDark ? '0 -2px 8px rgba(0,0,0,0.3)' : '0 -2px 6px rgba(0,0,0,0.05)') : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleSelectTab(tab)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: isActive ? (isDark ? '#F8FAFC' : '#0F172A') : (isDark ? '#94A3B8' : '#64748B'),
+                    fontWeight: isActive ? 800 : 600,
+                    fontSize: '0.8rem',
+                    padding: '7px 10px 7px 12px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title={`Ver prospectos de la pestaña ${tab}`}
+                >
+                  <Icons.Table />
+                  <span>{tab}</span>
+                  <span
+                    style={{
+                      background: isActive ? '#10B981' : '#CBD5E1',
+                      color: isActive ? 'white' : '#475569',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '1px 6px',
+                      borderRadius: '10px'
+                    }}
+                  >
+                    {count}
+                  </span>
+                </button>
+                {isCustom && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteTab(tab);
+                    }}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#94A3B8',
+                      cursor: 'pointer',
+                      padding: '4px 6px 4px 2px',
+                      fontSize: '0.72rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      opacity: 0.7
+                    }}
+                    title={`Eliminar pestaña "${tab}" de la nube`}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Botón "+ Agregar pestaña" (solo en Clientes) */}
+          {leadCategoryView !== 'reclutas' && (
+            isAddingTab ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#FFFFFF', padding: '4px 8px', borderRadius: '6px 6px 0 0', border: '1.5px solid #004D99', borderBottom: 'none' }}>
+              <input
+                type="text"
+                value={newTabInput}
+                onChange={(e) => setNewTabInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCreateNewTab();
+                  if (e.key === 'Escape') setIsAddingTab(false);
+                }}
+                placeholder="Nombre pestaña..."
+                autoFocus
+                style={{ fontSize: '0.78rem', padding: '3px 6px', borderRadius: '4px', border: '1px solid #CBD5E1', outline: 'none', width: '130px' }}
+              />
+              <button
+                type="button"
+                onClick={handleCreateNewTab}
+                style={{ border: 'none', background: '#10B981', color: 'white', borderRadius: '4px', padding: '3px 6px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}
+              >
+                ✓
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAddingTab(false)}
+                style={{ border: 'none', background: '#94A3B8', color: 'white', borderRadius: '4px', padding: '3px 6px', cursor: 'pointer', fontSize: '0.72rem' }}
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsAddingTab(true)}
+              style={{
+                border: '1px dashed #94A3B8',
+                borderBottom: 'none',
+                borderRadius: '6px 6px 0 0',
+                background: '#F1F5F9',
+                color: '#004D99',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                padding: '6px 12px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                whiteSpace: 'nowrap'
+              }}
+              title="Añadir una nueva pestaña / evento"
+            >
+              <Icons.Plus />
+              <span>Nueva Pestaña</span>
+            </button>
+          ))}
+
+          {/* Opción para ver todas las pestañas juntas */}
+          <button
+            type="button"
+            onClick={() => handleSelectTab('__ALL__')}
+            style={{
+              border: '1px solid #CBD5E1',
+              borderBottom: activeTab === '__ALL__' ? '3px solid #004D99' : 'none',
+              borderRadius: '6px 6px 0 0',
+              background: activeTab === '__ALL__' ? (isDark ? '#1E293B' : '#FFFFFF') : (isDark ? '#0B0F19' : '#E2E8F0'),
+              color: activeTab === '__ALL__' ? (isDark ? '#F59E0B' : '#004D99') : (isDark ? '#94A3B8' : '#64748B'),
+              fontWeight: activeTab === '__ALL__' ? 800 : 600,
+              fontSize: '0.75rem',
+              padding: '7px 10px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              whiteSpace: 'nowrap',
+              marginLeft: '8px'
+            }}
+            title="Ver todos los leads combinados de todas las pestañas"
+          >
+            <span>Ver Todo ({repLeads.length})</span>
+          </button>
+        </div>
+
+        {/* Botón Alternador de Vista: Clientes vs Reclutas */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '4px' }}>
+          <button
+            onClick={handleToggleCategoryView}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              border: leadCategoryView === 'reclutas' 
+                ? '1.5px solid #F59E0B' 
+                : (isDark ? '1.5px solid #2563EB' : '1.5px solid #004D99'),
+              background: leadCategoryView === 'reclutas' 
+                ? (isDark ? 'rgba(245, 158, 11, 0.25)' : '#FEF3C7') 
+                : (isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF'),
+              color: leadCategoryView === 'reclutas' 
+                ? (isDark ? '#FBBF24' : '#92400E') 
+                : (isDark ? '#60A5FA' : '#004D99'),
+              fontWeight: 700,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.08)',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              whiteSpace: 'nowrap'
+            }}
+            title={leadCategoryView === 'reclutas' ? 'Alternar a vista de Clientes Comerciales' : 'Alternar a vista de Reclutas'}
+          >
+            <span style={{ fontSize: '0.9rem' }}>
+              {leadCategoryView === 'reclutas' ? '🎯' : '👥'}
+            </span>
+            <span>
+              {leadCategoryView === 'reclutas' ? 'Reclutas' : 'Clientes'}
+            </span>
+            <span style={{
+              fontSize: '0.68rem',
+              padding: '1px 6px',
+              borderRadius: '10px',
+              background: leadCategoryView === 'reclutas' ? '#F59E0B' : '#004D99',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              marginLeft: '2px'
+            }}>
+              {repLeads.length}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Modal Emergente de Historial de Llamadas ──────────────────────── */}
+      {activeHistoryModal && (
+        <CallHistoryModal
+          lead={activeHistoryModal.lead}
+          mode={activeHistoryModal.mode}
+          isDark={isDark}
+          history={getLeadHistory(activeHistoryModal.lead)}
+          onClose={() => setActiveHistoryModal(null)}
+          onSetMode={(m) => setActiveHistoryModal(prev => prev ? { ...prev, mode: m } : null)}
+          onAddNewLog={async (code, obs) => {
+            await handleRegisterCallLog(activeHistoryModal.lead.id, code, obs);
+          }}
+          onDeleteLog={async (logId) => {
+            await handleDeleteLog(activeHistoryModal.lead.id, logId);
+          }}
+          onClearNC={async () => {
+            await handleClearNC(activeHistoryModal.lead.id);
+          }}
+        />
+      )}
+
+
+
+      {/* Modal de Error de Autenticación */}
+      {authErrorModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setAuthErrorModal(null)}
+        >
+          <div
+            style={{
+              background: isDark ? '#1E293B' : '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '460px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
+              textAlign: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '2.4rem', marginBottom: '10px' }}>⚠️</div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: isDark ? '#F8FAFC' : '#0F172A', margin: '0 0 8px 0' }}>
+              Error al Conectar con Google
+            </h3>
+            <div style={{
+              background: isDark ? '#0F172A' : '#FEF2F2',
+              border: isDark ? '1px solid #EF4444' : '1px solid #FCA5A5',
+              borderRadius: '8px',
+              padding: '12px',
+              fontSize: '0.82rem',
+              color: isDark ? '#FCA5A5' : '#991B1B',
+              marginBottom: '16px',
+              textAlign: 'left',
+              wordBreak: 'break-word',
+              fontFamily: 'monospace'
+            }}>
+              <strong>Código:</strong> {authErrorModal.code}<br/>
+              <strong>Detalle:</strong> {authErrorModal.message}
+            </div>
+            {authErrorModal.code === 'auth/operation-not-allowed' && (
+              <p style={{ fontSize: '0.82rem', color: isDark ? '#94A3B8' : '#64748B', marginBottom: '16px', lineHeight: '1.4' }}>
+                El proveedor Google no está habilitado en Firebase Authentication de este proyecto. Debe habilitarse en la consola de Firebase.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => setAuthErrorModal(null)}
+              style={{
+                background: '#004D99',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 24px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

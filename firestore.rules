@@ -2,39 +2,33 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * PROSPECTFLOW SECURITY RULES - PROTOTYPING MODE
-     * 
-     * Estas reglas han sido ajustadas para permitir el funcionamiento del Panel de Administración
-     * sin restricciones de propiedad para las operaciones de lectura, edición y borrado,
-     * cumpliendo con la solicitud de un panel administrativo de acceso directo.
-     */
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // --- Reglas para la colección 'leads' ---
+    // Reglas para la colección 'leads': lectura y escritura pública para el equipo comercial
     match /leads/{leadId} {
-      
-      // Permitimos lectura a cualquier usuario firmado para que el Panel Admin funcione
-      allow list, get: if isSignedIn();
-
-      // La creación requiere que el usuario esté firmado
-      allow create: if isSignedIn();
-
-      /**
-       * Para el prototipo y el panel administrativo:
-       * Permitimos actualizar y borrar si el usuario está firmado,
-       * eliminando la restricción de salesRepUid para evitar errores de permisos en el Panel Admin.
-       */
-      allow update, delete: if isSignedIn();
+      allow read, write: if true;
     }
 
-    // Colección de metadatos para roles (opcional para escalar en el futuro)
+    // Reglas para la colección 'crm_users': perfiles y sincronización de cuentas
+    match /crm_users/{uid} {
+      allow read, write: if true;
+    }
+
+    // Reglas para configuración global 'crm_settings' (pestañas y preferencias de CRM)
+    match /crm_settings/{docId} {
+      allow read, write: if true;
+    }
+
+    // Reglas para WhatsApp Campaigns y Outbox de Tick Tool
+    match /whatsapp_campaigns/{campaignId} {
+      allow read, write: if true;
+    }
+    match /whatsapp_outbox/{outboxId} {
+      allow read, write: if true;
+    }
+
+    // Colección de metadatos para roles
     match /roles_admin/{uid} {
-      allow get: if isSignedIn() && request.auth.uid == uid;
-      allow list, write: if false;
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

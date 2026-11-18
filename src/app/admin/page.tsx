@@ -1,291 +1,74 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useState, useEffect } from "react"
-import { 
-  useFirestore, 
-  useCollection, 
-  useMemoFirebase,
-  updateDocumentNonBlocking,
-  deleteDocumentNonBlocking,
-  useAuth,
-  initiateAnonymousSignIn
-} from "@/firebase"
-import { collection, query, orderBy, doc } from "firebase/firestore"
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter,
-  DialogDescription
-} from "@/components/ui/dialog"
-import { 
-  Pencil, 
-  Trash2, 
-  Download, 
-  ArrowLeft, 
-  Search,
-  Loader2,
-  AlertCircle
-} from "lucide-react"
-import Link from "next/link"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { useToast } from "@/hooks/use-toast"
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { VitalityAdmin } from "@/components/VitalityAdmin";
+import { subscribeToCloudLeads, saveCloudLead, deleteCloudLead } from "@/services/cloudCrm";
+import { LeadData } from "@/data/leadTypes";
 
 export default function AdminPage() {
-  const [editingLead, setEditingLead] = useState<any>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const { toast } = useToast()
-  
-  const db = useFirestore()
-  const auth = useAuth()
+  const router = useRouter();
+  const [leads, setLeads] = useState<LeadData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Asegurar que el administrador esté firmado para tener permisos de Firestore
   useEffect(() => {
-    if (auth && !auth.currentUser) {
-      initiateAnonymousSignIn(auth)
+    // Si por alguna razón la conexión con Firestore tarda más de 3.5s,
+    // desbloquear la interfaz para que no quede en pantalla de carga
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 3500);
+
+    const unsubscribe = subscribeToCloudLeads((cloudLeads) => {
+      setLeads(cloudLeads);
+      setLoading(false);
+      clearTimeout(safetyTimeout);
+    });
+
+    return () => {
+      unsubscribe();
+      clearTimeout(safetyTimeout);
+    };
+  }, []);
+
+  const handleUpdateLead = async (updated: LeadData) => {
+    try {
+      await saveCloudLead(updated);
+    } catch (e) {
+      console.error("Error guardando lead:", e);
     }
-  }, [auth])
-  
-  const leadsQuery = useMemoFirebase(() => {
-    if (!db) return null
-    return query(collection(db, "leads"), orderBy("createdAt", "desc"))
-  }, [db])
+  };
 
-  const { data: leads, isLoading, error } = useCollection(leadsQuery)
-
-  const handleDelete = (id: string, name: string) => {
-    if (!db) return
-    
-    const confirmed = window.confirm(`¿Estás seguro de eliminar permanentemente el registro de "${name}"?`)
-    
-    if (confirmed) {
-      const docRef = doc(db, "leads", id)
-      deleteDocumentNonBlocking(docRef)
-      toast({
-        title: "Registro eliminado",
-        description: "El registro ha sido removido exitosamente.",
-      })
+  const handleDeleteLead = async (leadId: string) => {
+    try {
+      await deleteCloudLead(leadId);
+    } catch (e) {
+      console.error("Error eliminando lead:", e);
     }
+  };
+
+  const handleClose = () => {
+    router.push("/");
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[#D1D3D4]">
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-white p-8 shadow-xl">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#004D99] border-t-transparent" />
+          <p className="font-semibold text-[#004D99]">Cargando Vitality CRM...</p>
+        </div>
+      </div>
+    );
   }
-
-  const handleUpdate = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!db || !editingLead) return
-    const docRef = doc(db, "leads", editingLead.id)
-    const { id, ...dataToUpdate } = editingLead
-    updateDocumentNonBlocking(docRef, dataToUpdate)
-    setEditingLead(null)
-    toast({
-      title: "Registro actualizado",
-      description: "Los cambios se han guardado correctamente.",
-    })
-  }
-
-  const exportToCSV = () => {
-    if (!leads) return
-    
-    const headers = ["Fecha", "Nombre", "Celular", "Distrito", "Encargado", "Notas", "Pregunta Microplasticos", "Interes Deteccion"]
-    const rows = leads.map(l => [
-      l.createdAt?.seconds ? format(new Date(l.createdAt.seconds * 1000), "dd/MM/yyyy HH:mm") : "",
-      l.fullName,
-      l.phoneNumber,
-      l.district,
-      l.salesRep,
-      l.notes?.replace(/\n/g, " ") || "",
-      l.pollutionAwareness?.replace(/\n/g, " ") || "",
-      l.interestInDetection ? "SÍ" : "NO"
-    ])
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(r => r.map(cell => `"${cell}"`).join(","))
-    ].join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `registros_salud_${format(new Date(), "yyyy-MM-dd")}.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  const filteredLeads = leads?.filter(l => 
-    l.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    l.phoneNumber?.includes(searchTerm) ||
-    l.district?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
 
   return (
-    <div className="min-h-svh bg-slate-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-20 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <ArrowLeft className="h-6 w-6" />
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold text-primary">Panel de Administración</h1>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por nombre..." 
-              className="pl-10 w-full md:w-64"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <Button onClick={exportToCSV} className="bg-accent text-accent-foreground font-bold flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            EXPORTAR CSV
-          </Button>
-        </div>
-      </header>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 animate-in fade-in slide-in-from-top-2">
-          <AlertCircle className="h-5 w-5 shrink-0" />
-          <p className="font-medium text-sm md:text-base">
-            Error de permisos: No tienes autorización para gestionar estos datos. Verifica tu conexión.
-          </p>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <main className="flex-1 p-6 overflow-x-auto">
-        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-          {isLoading ? (
-            <div className="h-64 flex flex-col items-center justify-center space-y-4">
-              <Loader2 className="h-10 w-10 text-primary animate-spin" />
-              <p className="text-muted-foreground">Cargando registros...</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="font-bold">Fecha</TableHead>
-                  <TableHead className="font-bold">Nombre</TableHead>
-                  <TableHead className="font-bold">Celular</TableHead>
-                  <TableHead className="font-bold">Distrito</TableHead>
-                  <TableHead className="font-bold">Encargado</TableHead>
-                  <TableHead className="font-bold">Notas</TableHead>
-                  <TableHead className="font-bold text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLeads && filteredLeads.length > 0 ? (
-                  filteredLeads.map((lead, idx) => (
-                    <TableRow key={lead.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
-                      <TableCell className="whitespace-nowrap">
-                        {lead.createdAt?.seconds ? format(new Date(lead.createdAt.seconds * 1000), "dd MMM, HH:mm", { locale: es }) : "-"}
-                      </TableCell>
-                      <TableCell className="font-medium">{lead.fullName}</TableCell>
-                      <TableCell>{lead.phoneNumber}</TableCell>
-                      <TableCell>{lead.district}</TableCell>
-                      <TableCell>{lead.salesRep}</TableCell>
-                      <TableCell className="max-w-[200px] truncate" title={lead.notes}>
-                        {lead.notes || "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            onClick={() => setEditingLead(lead)}
-                            title="Editar"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDelete(lead.id, lead.fullName)}
-                            title="Eliminar"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                      No se encontraron registros
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-      </main>
-
-      {/* Edit Modal */}
-      <Dialog open={!!editingLead} onOpenChange={() => setEditingLead(null)}>
-        <DialogContent className="sm:max-w-[500px] rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-primary">Editar Registro</DialogTitle>
-            <DialogDescription>Modifica los datos del contacto seleccionado.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdate} className="space-y-6 py-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Nombre Completo</Label>
-                <Input 
-                  id="edit-name" 
-                  value={editingLead?.fullName || ""} 
-                  onChange={(e) => setEditingLead({...editingLead, fullName: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-phone">Celular</Label>
-                <Input 
-                  id="edit-phone" 
-                  value={editingLead?.phoneNumber || ""} 
-                  onChange={(e) => setEditingLead({...editingLead, phoneNumber: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-notes">Notas</Label>
-                <textarea 
-                  id="edit-notes"
-                  className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={editingLead?.notes || ""} 
-                  onChange={(e) => setEditingLead({...editingLead, notes: e.target.value})}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setEditingLead(null)}>Cancelar</Button>
-              <Button type="submit" className="bg-primary hover:bg-primary/90">Guardar Cambios</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+    <div className="h-screen w-screen overflow-hidden">
+      <VitalityAdmin
+        leads={leads}
+        onClose={handleClose}
+        onUpdateLead={handleUpdateLead}
+        onDeleteLead={handleDeleteLead}
+      />
     </div>
-  )
+  );
 }
