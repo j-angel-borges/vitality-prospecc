@@ -67,7 +67,7 @@ export const FormDemoView: React.FC = () => {
       const gain = ctx.createGain();
 
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, ctx.currentTime); // 880 Hz
+      osc1.frequency.setValueAtTime(880, ctx.currentTime);
       osc1.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.15);
 
       osc2.type = 'triangle';
@@ -185,37 +185,39 @@ export const FormDemoView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col">
-      {/* Top Bar */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-3">
+    <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col overflow-x-hidden">
+      {/* Top Bar with Safe-Area Clearance for iOS & Android */}
+      <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 py-3 sm:py-4 pt-[max(0.75rem,env(safe-area-inset-top))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <Link
             href="/"
-            className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors"
+            className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors shrink-0 active:scale-95"
             title="Volver al Hub"
+            aria-label="Volver al Hub"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
           </Link>
-          <div className="flex items-center gap-2.5">
-            <img src="/vitality_symbol.png" alt="Vitality" className="w-7 h-7 object-contain" />
-            <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
-              Gestión de Citas (FormDemo)
-              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-                Vitality ERP
+          <div className="flex items-center gap-2 min-w-0">
+            <img src="/vitality_symbol.png" alt="Vitality" className="w-6 h-6 sm:w-7 sm:h-7 object-contain shrink-0" />
+            <h1 className="text-sm sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5 truncate">
+              <span>Gestión de Citas</span>
+              <span className="hidden xs:inline text-[9px] sm:text-[10px] font-extrabold uppercase px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                ERP
               </span>
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/crm"
-            className="w-9 h-9 rounded-xl bg-blue-900/40 text-blue-300 hover:bg-blue-900/60 border border-blue-500/30 transition-all flex items-center justify-center"
+            className="w-9 h-9 rounded-xl bg-blue-900/40 text-blue-300 hover:bg-blue-900/60 border border-blue-500/30 transition-all flex items-center justify-center active:scale-95"
             title="Ir al CRM"
+            aria-label="Ir al CRM"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
               <path d="M3 9h18M9 21V9"/>
             </svg>
@@ -224,38 +226,39 @@ export const FormDemoView: React.FC = () => {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-8">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      <main className="flex-1 max-w-2xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-8 shadow-2xl relative overflow-hidden">
           {/* Subtle Ambient Glow */}
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Form Header */}
-          <div className="mb-6">
-            <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+          <div className="mb-5">
+            <h2 className="text-base sm:text-xl font-extrabold text-white tracking-tight">
               Registrar Nueva Cita de Llamada
             </h2>
           </div>
 
-          <form onSubmit={handleAgendar} className="space-y-5">
+          <form onSubmit={handleAgendar} className="space-y-4 sm:space-y-5">
             {/* Tipo de Cita Selector */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+              <label className="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
                 Tipo de Cita
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setTipoCita('demo')}
-                  className={`p-3.5 rounded-xl border text-left transition-all ${
+                  style={{ touchAction: 'manipulation' }}
+                  className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all ${
                     tipoCita === 'demo'
                       ? 'border-blue-500 bg-blue-600/15 ring-2 ring-blue-500/30 text-white'
                       : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-blue-400">Demostración (Demo)</span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <span className="text-xs sm:text-sm font-bold text-blue-400">Demostración (Demo)</span>
+                    <span className="self-start sm:self-auto text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300">
                       2h 30m
                     </span>
                   </div>
@@ -264,15 +267,16 @@ export const FormDemoView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTipoCita('socio')}
-                  className={`p-3.5 rounded-xl border text-left transition-all ${
+                  style={{ touchAction: 'manipulation' }}
+                  className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all ${
                     tipoCita === 'socio'
                       ? 'border-amber-500 bg-amber-600/15 ring-2 ring-amber-500/30 text-white'
                       : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-amber-400">Reunión de Socio</span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <span className="text-xs sm:text-sm font-bold text-amber-400">Reunión de Socio</span>
+                    <span className="self-start sm:self-auto text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
                       30 min
                     </span>
                   </div>
@@ -281,15 +285,15 @@ export const FormDemoView: React.FC = () => {
             </div>
 
             {/* Asesor y Cliente */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
                   Asesor / Ejecutivo
                 </label>
                 <select
                   value={asesor}
                   onChange={(e) => setAsesor(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
                 >
                   <option value="Ricfel Olaizola">Ricfel Olaizola (SuperAdmin)</option>
                   <option value="Jose Angel Borges">José Angel Borges (SuperAdmin)</option>
@@ -304,7 +308,7 @@ export const FormDemoView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
                   {tipoCita === 'demo' ? 'Nombre del Cliente' : 'Nombre del Socio'} *
                 </label>
                 <input
@@ -313,15 +317,15 @@ export const FormDemoView: React.FC = () => {
                   placeholder="Ej. Rocio Giraldo / Cezar Calderon"
                   value={cliente}
                   onChange={(e) => setCliente(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
                 />
               </div>
             </div>
 
             {/* Celular y Dirección */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
                   Teléfono Celular / WhatsApp
                 </label>
                 <input
@@ -329,12 +333,12 @@ export const FormDemoView: React.FC = () => {
                   placeholder="Ej. 992963045"
                   value={celular}
                   onChange={(e) => setCelular(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
                   Dirección y Referencia
                 </label>
                 <input
@@ -342,15 +346,15 @@ export const FormDemoView: React.FC = () => {
                   placeholder="Ej. Jr Raymundo Carcamo 1000 Sta Catalina"
                   value={direccion}
                   onChange={(e) => setDireccion(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
                 />
               </div>
             </div>
 
-            {/* Fecha y Hora Integradas */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Fecha y Hora Integradas con dark colorScheme nativo en Android e iOS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
                   Fecha de la Cita
                 </label>
                 <input
@@ -358,12 +362,13 @@ export const FormDemoView: React.FC = () => {
                   required
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  style={{ colorScheme: 'dark' }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
                   Hora de Inicio ({duracionTexto})
                 </label>
                 <input
@@ -371,14 +376,15 @@ export const FormDemoView: React.FC = () => {
                   required
                   value={hora}
                   onChange={(e) => setHora(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  style={{ colorScheme: 'dark' }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
                 />
               </div>
             </div>
 
             {/* Observaciones */}
             <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5">
+              <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
                 Observaciones y Notas
               </label>
               <textarea
@@ -386,16 +392,17 @@ export const FormDemoView: React.FC = () => {
                 placeholder="Notas de la llamada, productos de interés..."
                 value={observaciones}
                 onChange={(e) => setObservaciones(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
               />
             </div>
 
-            {/* Actions Bar: Pure SVGs as requested in screenshot 083053 */}
-            <div className="pt-3 flex items-center justify-center gap-4">
+            {/* Actions Bar: Pure SVGs as requested with minimum 48px touch targets */}
+            <div className="pt-2 flex items-center justify-center gap-4">
               {/* Submit Agendar Button: Pure SVG */}
               <button
                 type="submit"
                 disabled={isSubmitting}
+                style={{ touchAction: 'manipulation' }}
                 className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-900/30 transition-all active:scale-95 disabled:opacity-50"
                 title="Agendar Cita en Calendario"
                 aria-label="Agendar Cita en Calendario"
@@ -417,6 +424,7 @@ export const FormDemoView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleBellClick}
+                style={{ touchAction: 'manipulation' }}
                 className={`w-14 h-14 rounded-2xl border transition-all flex items-center justify-center active:scale-95 ${
                   agendadoExitoso || copiedMsg
                     ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-lg shadow-amber-500/20 animate-pulse'
@@ -452,17 +460,18 @@ export const FormDemoView: React.FC = () => {
 
           {/* Success Box */}
           {agendadoExitoso && !copiedMsg && (
-            <div className="mt-4 p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
+            <div className="mt-4 p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold shrink-0">
                   ✓
                 </div>
-                <span className="font-bold text-emerald-300">¡Cita agendada exitosamente!</span>
+                <span className="font-bold text-emerald-300 truncate">¡Cita agendada exitosamente!</span>
               </div>
               <button
                 type="button"
                 onClick={handleBellClick}
-                className="w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-colors flex items-center justify-center"
+                style={{ touchAction: 'manipulation' }}
+                className="w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-colors flex items-center justify-center shrink-0 active:scale-95"
                 title="Copiar para WhatsApp"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

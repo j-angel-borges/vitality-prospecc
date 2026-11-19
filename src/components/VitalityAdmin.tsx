@@ -2174,7 +2174,8 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
           position: 'fixed',
           inset: 0,
           width: '100vw',
-          height: '100vh',
+          height: '100dvh',
+          minHeight: '-webkit-fill-available',
           background: isDark ? '#0B0F19' : '#F1F5F9',
           display: 'flex',
           flexDirection: 'column',
@@ -2188,7 +2189,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
         }}
       >
       {/* ── Top Fixed Header & Toolbar ────────────────────────────────────── */}
-      <div style={{ padding: '12px 16px 0 16px', flexShrink: 0 }}>
+      <div style={{ padding: 'max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left))', flexShrink: 0 }}>
         {/* ── Header Row ────────────────────────────────────────────────────── */}
         <div className="admin-header-row" style={{ marginBottom: '8px' }}>
         <div>
@@ -2398,7 +2399,9 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                 }}
                 title="Portal de administración de usuarios y leads"
               >
-                <span>⚡</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
                 <span>Portal</span>
               </button>
             )}
@@ -3661,7 +3664,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
         style={{
           background: isDark ? '#090D16' : '#E2E8F0',
           borderTop: isDark ? '1px solid #1E293B' : '1px solid #CBD5E1',
-          padding: '6px 16px 0 16px',
+          padding: '6px max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',

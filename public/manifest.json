@@ -1,12 +1,12 @@
 {
-  "name": "Vitality Prospecc & CRM",
-  "short_name": "Vitality",
-  "description": "Experiencia Culinaria y CRM de Gestión Comercial Vitality Core",
+  "name": "Vitality ERP | Royal Prestige",
+  "short_name": "Vitality ERP",
+  "description": "Central Operativa, Comercial y CRM Vitality Royal Prestige",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#002B49",
-  "theme_color": "#002B49",
+  "background_color": "#002244",
+  "theme_color": "#002244",
   "orientation": "portrait-primary",
   "icons": [
     {

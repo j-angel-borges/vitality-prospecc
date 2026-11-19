@@ -251,7 +251,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px'
+        padding: 'max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left))'
       }}
       onClick={onClose}
     >
@@ -259,7 +259,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
         style={{
           width: '100%',
           maxWidth: '860px',
-          maxHeight: '90vh',
+          maxHeight: 'calc(100dvh - 20px)',
           backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
           color: isDark ? '#F1F5F9' : '#0F172A',
           borderRadius: '18px',

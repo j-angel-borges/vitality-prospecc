@@ -53,18 +53,19 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px'
+        padding: 'max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))'
       }}
     >
       <div
         style={{
           width: '100%',
           maxWidth: '460px',
+          maxHeight: 'calc(100dvh - 24px)',
           backgroundColor: isDark ? '#0F172A' : '#FFFFFF',
           borderRadius: '20px',
           boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)',
           border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
-          overflow: 'hidden',
+          overflowY: 'auto',
           animation: 'fadeInUp 0.3s ease-out'
         }}
       >

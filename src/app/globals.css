@@ -24,6 +24,12 @@
     --input: 210 10% 80%;
     --ring: 210 100% 30%;
     --radius: 0.75rem;
+
+    /* Mobile Safe Area Insets (iOS Dynamic Island / Notch & Android Navigation Bars) */
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
   }
   .dark {
     --background: 210 20% 10%;
@@ -51,12 +57,21 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    height: 100%;
   }
   body {
-    @apply bg-background text-foreground font-body antialiased selection:bg-accent selection:text-accent-foreground;
+    @apply bg-background text-foreground font-body antialiased;
+    touch-action: manipulation;
+    min-height: 100%;
   }
 }
 
+/* Transitions */
 .slide-transition-enter {
   opacity: 0;
   transform: translateX(20px);
@@ -96,7 +111,48 @@
   display: none;
 }
 
-/* Touch friendly mobile tap highlight removal */
-* {
-  -webkit-tap-highlight-color: transparent;
+/* Prevent unwanted iOS Safari 100%+ auto-zoom on input focus */
+@media screen and (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Native Date and Time Picker clean styling across mobile browsers */
+input[type="date"], input[type="time"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Safe Area Utility Classes */
+.pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+.pl-safe {
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+}
+.pr-safe {
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+.top-safe {
+  top: max(0.75rem, env(safe-area-inset-top));
+}
+.bottom-safe {
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+.right-safe {
+  right: max(0.75rem, env(safe-area-inset-right));
+}
+.left-safe {
+  left: max(0.75rem, env(safe-area-inset-left));
+}
+
+/* iOS Safari Smooth Iframe Scrolling */
+.iframe-ios-fix {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: scroll;
 }

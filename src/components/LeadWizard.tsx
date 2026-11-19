@@ -46,12 +46,20 @@ export function LeadWizard() {
   const toggleFullscreen = async () => {
     try {
       if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen()
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen()
+        } else if ((document.documentElement as any).webkitRequestFullscreen) {
+          await (document.documentElement as any).webkitRequestFullscreen()
+        }
       } else {
-        await document.exitFullscreen()
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen()
+        }
       }
     } catch (e) {
-      console.warn("Fullscreen toggle error:", e)
+      console.warn("Fullscreen toggle note:", e)
     }
   }
 
@@ -90,14 +98,27 @@ export function LeadWizard() {
   }
 
   return (
-    <div className="flex flex-col h-svh w-full bg-black overflow-hidden relative">
-      {/* 3 Top-Right Persistent Action Buttons: Expandir, CRM, Retroceder (Pure SVGs) */}
-      <div className="fixed top-3 right-3 z-50 flex items-center gap-2">
+    <div
+      className="flex flex-col w-full bg-black overflow-hidden relative"
+      style={{
+        height: '100dvh',
+        minHeight: '-webkit-fill-available'
+      }}
+    >
+      {/* 3 Top-Right Persistent Action Buttons: Expandir, CRM, Retroceder (Pure SVGs with Safe-Area Clearance) */}
+      <div
+        className="fixed z-50 flex items-center gap-1.5 sm:gap-2"
+        style={{
+          top: 'max(0.75rem, env(safe-area-inset-top))',
+          right: 'max(0.75rem, env(safe-area-inset-right))'
+        }}
+      >
         {/* 1. Expandir / Pantalla Completa */}
         <button
           type="button"
           onClick={toggleFullscreen}
-          className="w-9 h-9 rounded-xl bg-slate-900/60 hover:bg-slate-900/90 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center transition-all active:scale-95 hover:border-white/40"
+          style={{ touchAction: 'manipulation' }}
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900/70 hover:bg-slate-900 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center transition-all active:scale-95 hover:border-white/40"
           title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
         >
@@ -115,7 +136,8 @@ export function LeadWizard() {
         {/* 2. CRM Link */}
         <Link
           href="/crm"
-          className="w-9 h-9 rounded-xl bg-slate-900/60 hover:bg-slate-900/90 text-blue-300 backdrop-blur-md border border-blue-400/30 shadow-md flex items-center justify-center transition-all active:scale-95 hover:border-blue-400/60"
+          style={{ touchAction: 'manipulation' }}
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900/70 hover:bg-slate-900 text-blue-300 backdrop-blur-md border border-blue-400/30 shadow-md flex items-center justify-center transition-all active:scale-95 hover:border-blue-400/60"
           title="Ir al CRM"
           aria-label="Ir al CRM"
         >
@@ -129,7 +151,8 @@ export function LeadWizard() {
         <button
           type="button"
           onClick={handleRetroceder}
-          className="w-9 h-9 rounded-xl bg-slate-900/60 hover:bg-slate-900/90 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center transition-all active:scale-95 hover:border-white/40"
+          style={{ touchAction: 'manipulation' }}
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900/70 hover:bg-slate-900 text-white backdrop-blur-md border border-white/20 shadow-md flex items-center justify-center transition-all active:scale-95 hover:border-white/40"
           title="Retroceder"
           aria-label="Retroceder"
         >

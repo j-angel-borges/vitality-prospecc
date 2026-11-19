@@ -5,11 +5,23 @@ import Link from 'next/link';
 
 export default function SetsPage() {
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-slate-50 m-0 p-0">
-      {/* Floating Back Button to Vitality ERP Hub */}
+    <div
+      className="relative w-screen bg-slate-50 m-0 p-0 overflow-hidden"
+      style={{
+        height: '100dvh',
+        minHeight: '-webkit-fill-available',
+        WebkitOverflowScrolling: 'touch'
+      }}
+    >
+      {/* Floating Back Button to Vitality ERP Hub with iOS/Android Safe-Area clearance */}
       <Link
         href="/"
-        className="fixed top-3 left-3 z-50 w-9 h-9 rounded-xl bg-slate-900/80 hover:bg-slate-900 text-white backdrop-blur-md shadow-lg border border-slate-700/60 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+        className="fixed z-50 w-10 h-10 rounded-2xl bg-slate-900/85 hover:bg-slate-900 text-white backdrop-blur-md shadow-lg border border-slate-700/60 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+        style={{
+          top: 'max(0.75rem, env(safe-area-inset-top))',
+          left: 'max(0.75rem, env(safe-area-inset-left))',
+          touchAction: 'manipulation'
+        }}
         title="Volver al Hub Vitality ERP"
         aria-label="Volver al Hub Vitality ERP"
       >
@@ -18,12 +30,18 @@ export default function SetsPage() {
         </svg>
       </Link>
 
-      {/* Standalone Pixel-Perfect Cotizador Clone of https://sets-vitality.web.app/ */}
+      {/* Standalone Pixel-Perfect Cotizador Clone with iOS WebKit touch scrolling */}
       <iframe
         src="/sets/cotizador.html"
         title="Vitality Cotizador & Armador de Sets Royal Prestige"
-        className="w-full h-full border-0 block"
-        style={{ border: 'none', width: '100vw', height: '100vh' }}
+        className="border-0 block"
+        style={{
+          width: '1px',
+          minWidth: '100%',
+          height: '100%',
+          border: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }}
       />
     </div>
   );
