@@ -89,20 +89,20 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
 
       {/* Scrollable Content Area */}
       <div className="relative z-10 flex-1 overflow-y-auto px-4 sm:px-6 md:px-12 pb-6 flex items-center justify-center">
-        <div className="max-w-3xl w-full py-2 sm:py-4">
+        <div className="max-w-2xl w-full py-2 sm:py-4">
           {subStep === 0 && (
-            <div className="space-y-6 sm:space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-6">
-              <h2 className="text-xl sm:text-3xl md:text-5xl font-bold text-white text-center leading-snug drop-shadow-2xl px-2">
+            <div className="space-y-4 sm:space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-6">
+              <h2 className="text-base sm:text-2xl md:text-4xl font-bold text-white text-center leading-snug drop-shadow-2xl px-2">
                 ¿Del 1 al 10 qué tan importante es la salud en su hogar?
               </h2>
-              <div className="grid grid-cols-5 gap-2 sm:gap-3 md:gap-4 max-w-xl mx-auto">
+              <div className="grid grid-cols-5 gap-2 sm:gap-3 md:gap-4 max-w-lg mx-auto">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                   <Button
                     key={num}
                     onClick={() => handleScoreClick(num)}
                     variant={data.healthScore === num ? "default" : "outline"}
                     className={cn(
-                      "h-13 sm:h-16 md:h-20 text-lg sm:text-2xl md:text-3xl font-bold rounded-xl sm:rounded-2xl transition-all active:scale-95 border-2",
+                      "h-11 sm:h-14 md:h-18 text-sm sm:text-xl md:text-2xl font-bold rounded-xl sm:rounded-2xl transition-all active:scale-95 border-2",
                       data.healthScore === num 
                         ? "bg-accent text-accent-foreground border-accent scale-105 shadow-xl" 
                         : "border-white/40 text-white hover:bg-white/20"
@@ -116,43 +116,43 @@ export function DiscoverySlide({ data, onUpdate, onComplete }: DiscoverySlidePro
           )}
 
           {subStep === 1 && (
-            <div className="space-y-5 sm:space-y-8 md:space-y-10 animate-in fade-in slide-in-from-bottom-6 max-w-2xl mx-auto">
-              <h2 className="text-xl sm:text-2xl md:text-4xl font-bold text-white text-center leading-snug drop-shadow-2xl px-2">
+            <div className="space-y-4 sm:space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-6 max-w-xl mx-auto">
+              <h2 className="text-base sm:text-xl md:text-3xl font-bold text-white text-center leading-snug drop-shadow-2xl px-2">
                 ¿Ha escuchado antes sobre la contaminación actual por microplásticos y metales pesados en la cocina?
               </h2>
               <Textarea
                 placeholder="Escriba su respuesta aquí..."
-                className="min-h-[130px] sm:min-h-[160px] md:min-h-[220px] text-base sm:text-lg md:text-2xl rounded-xl sm:rounded-2xl border-white/20 bg-white/10 text-white placeholder:text-white/40 focus:border-accent focus:ring-accent p-4 sm:p-6 backdrop-blur-md shadow-inner"
+                className="min-h-[100px] sm:min-h-[140px] md:min-h-[180px] text-sm sm:text-base md:text-xl rounded-xl sm:rounded-2xl border-white/20 bg-white/10 text-white placeholder:text-white/40 focus:border-accent focus:ring-accent p-3.5 sm:p-5 backdrop-blur-md shadow-inner"
                 value={data.pollutionAwareness}
                 onChange={(e) => onUpdate({ pollutionAwareness: e.target.value })}
               />
               <Button 
                 onClick={handleNext}
                 disabled={!data.pollutionAwareness.trim()}
-                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-13 sm:h-16 md:h-20 text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl shadow-xl flex items-center justify-center gap-2 sm:gap-3 transition-all hover:scale-[1.02] active:scale-95"
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-11 sm:h-14 md:h-16 text-sm sm:text-xl font-bold rounded-xl sm:rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
               >
                 <span>Siguiente</span>
-                <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6" />
+                <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
           )}
 
           {subStep === 2 && (
-            <div className="space-y-6 sm:space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-6 max-w-xl mx-auto">
-              <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-white text-center leading-snug drop-shadow-2xl px-2">
+            <div className="space-y-4 sm:space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-6 max-w-lg mx-auto">
+              <h2 className="text-base sm:text-2xl md:text-3xl font-bold text-white text-center leading-snug drop-shadow-2xl px-2">
                 ¿Le interesaría saber cómo detectar la contaminación en su cocina y alimentos?
               </h2>
-              <div className="flex flex-col gap-4 sm:gap-6">
+              <div className="flex flex-col gap-3 sm:gap-5">
                 <Button
                   onClick={() => { onUpdate({ interestInDetection: true }); handleNext(); }}
-                  className="h-16 sm:h-22 md:h-28 text-2xl sm:text-3xl md:text-4xl font-bold rounded-2xl md:rounded-3xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-2xl transition-all hover:scale-105 active:scale-95"
+                  className="h-12 sm:h-16 md:h-22 text-lg sm:text-2xl md:text-3xl font-bold rounded-xl sm:rounded-2xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-2xl transition-all hover:scale-105 active:scale-95"
                 >
                   SÍ
                 </Button>
                 <Button
                   onClick={() => { onUpdate({ interestInDetection: false }); handleNext(); }}
                   variant="outline"
-                  className="h-13 sm:h-16 md:h-20 text-lg sm:text-2xl md:text-3xl font-bold rounded-2xl md:rounded-3xl border-2 border-white/40 text-white hover:bg-white/20 transition-all active:scale-95"
+                  className="h-11 sm:h-14 md:h-18 text-sm sm:text-xl md:text-2xl font-bold rounded-xl sm:rounded-2xl border-2 border-white/40 text-white hover:bg-white/20 transition-all active:scale-95"
                 >
                   NO
                 </Button>

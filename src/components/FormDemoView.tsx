@@ -221,16 +221,16 @@ export const FormDemoView: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content Area (Clean White Card) */}
-      <main className="flex-1 max-w-2xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-8 shadow-sm relative overflow-hidden">
+      {/* Main Content Area (Clean White Card with Mobile Calibration) */}
+      <main className="flex-1 max-w-xl w-full mx-auto px-3 sm:px-4 py-3 sm:py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="bg-white border border-slate-200/90 rounded-xl sm:rounded-2xl p-4 sm:p-7 shadow-sm relative overflow-hidden">
           {/* Subtle Light Ambient Glow */}
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-100/50 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-amber-100/40 rounded-full blur-3xl pointer-events-none" />
 
           {/* Form Header */}
-          <div className="mb-5 text-center sm:text-left">
-            <h2 className="text-base sm:text-xl font-extrabold text-[#002244] tracking-tight">
+          <div className="mb-4 text-center sm:text-left">
+            <h2 className="text-sm sm:text-lg font-extrabold text-[#002244] tracking-tight">
               Registrar Nueva Cita de Llamada
             </h2>
           </div>
@@ -380,21 +380,21 @@ export const FormDemoView: React.FC = () => {
               />
             </div>
 
-            {/* Actions Bar: Pure SVGs with High Contrast */}
-            <div className="pt-2 flex items-center justify-center gap-4">
+            {/* Actions Bar: Pure SVGs with Ergonomic Calibration */}
+            <div className="pt-2 flex items-center justify-center gap-3.5">
               {/* Submit Agendar Button: Pure SVG */}
               <button
                 type="submit"
                 disabled={isSubmitting}
                 style={{ touchAction: 'manipulation' }}
-                className="w-14 h-14 rounded-2xl bg-gradient-to-r from-[#002244] to-[#004D99] hover:from-[#001833] hover:to-[#003d7a] text-white flex items-center justify-center shadow-md shadow-blue-950/20 transition-all active:scale-95 disabled:opacity-50"
+                className="w-12 h-12 rounded-xl bg-gradient-to-r from-[#002244] to-[#004D99] hover:from-[#001833] hover:to-[#003d7a] text-white flex items-center justify-center shadow-md shadow-blue-950/20 transition-all active:scale-95 disabled:opacity-50"
                 title="Agendar Cita en Calendario"
                 aria-label="Agendar Cita en Calendario"
               >
                 {isSubmitting ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                     <line x1="16" y1="2" x2="16" y2="6"/>
                     <line x1="8" y1="2" x2="8" y2="6"/>
@@ -409,7 +409,7 @@ export const FormDemoView: React.FC = () => {
                 type="button"
                 onClick={handleBellClick}
                 style={{ touchAction: 'manipulation' }}
-                className={`w-14 h-14 rounded-2xl border transition-all flex items-center justify-center active:scale-95 ${
+                className={`w-12 h-12 rounded-xl border transition-all flex items-center justify-center active:scale-95 ${
                   agendadoExitoso || copiedMsg
                     ? 'bg-amber-50 border-amber-400 text-amber-700 shadow-md shadow-amber-500/15 animate-pulse'
                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs'
@@ -418,8 +418,8 @@ export const FormDemoView: React.FC = () => {
                 aria-label="Sonar campana y copiar formato para WhatsApp"
               >
                 <svg
-                  width="22"
-                  height="22"
+                  width="20"
+                  height="20"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"

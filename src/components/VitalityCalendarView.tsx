@@ -352,14 +352,14 @@ export const VitalityCalendarView: React.FC<VitalityCalendarViewProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 18px',
+          padding: '8px 12px',
           background: isDark ? '#111827' : '#FFFFFF',
           borderBottom: isDark ? '1px solid #1E293B' : '1px solid #E2E8F0',
-          gap: '12px',
+          gap: '8px',
           flexWrap: 'wrap'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={handleToday}
@@ -368,8 +368,8 @@ export const VitalityCalendarView: React.FC<VitalityCalendarViewProps> = ({
               color: isDark ? '#F8FAFC' : '#1E293B',
               border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
               borderRadius: '8px',
-              padding: '6px 14px',
-              fontSize: '0.8rem',
+              padding: '5px 10px',
+              fontSize: '0.78rem',
               fontWeight: 700,
               cursor: 'pointer'
             }}
@@ -385,7 +385,7 @@ export const VitalityCalendarView: React.FC<VitalityCalendarViewProps> = ({
                 border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
                 color: isDark ? '#E2E8F0' : '#475569',
                 borderRadius: '6px',
-                padding: '5px 10px',
+                padding: '4px 8px',
                 cursor: 'pointer',
                 fontWeight: 700
               }}
@@ -401,7 +401,7 @@ export const VitalityCalendarView: React.FC<VitalityCalendarViewProps> = ({
                 border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
                 color: isDark ? '#E2E8F0' : '#475569',
                 borderRadius: '6px',
-                padding: '5px 10px',
+                padding: '4px 8px',
                 cursor: 'pointer',
                 fontWeight: 700
               }}
@@ -410,12 +410,12 @@ export const VitalityCalendarView: React.FC<VitalityCalendarViewProps> = ({
               &#9654;
             </button>
           </div>
-          <span style={{ fontSize: '1rem', fontWeight: 800, color: isDark ? '#60A5FA' : '#004D99' }}>
+          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: isDark ? '#60A5FA' : '#004D99' }}>
             {MONTHS_ES[weekDays[0].getMonth()]} {weekDays[0].getFullYear()}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => {
@@ -432,20 +432,20 @@ export const VitalityCalendarView: React.FC<VitalityCalendarViewProps> = ({
               color: isDark ? '#60A5FA' : '#004D99',
               border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
               borderRadius: '8px',
-              padding: '6px 12px',
-              fontSize: '0.78rem',
+              padding: '5px 10px',
+              fontSize: '0.75rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '5px'
             }}
             title="Sincronizar Google Calendar"
           >
             <span style={{ display: 'inline-flex', animation: isLoading ? 'spin 1s linear infinite' : 'none' }}>
               🔄
             </span>
-            <span>{isLoading ? 'Sincronizando...' : 'Recargar Calendar'}</span>
+            <span className="hidden xs:inline">{isLoading ? 'Sincronizando...' : 'Recargar'}</span>
           </button>
 
           <button
@@ -459,14 +459,15 @@ export const VitalityCalendarView: React.FC<VitalityCalendarViewProps> = ({
               color: '#FFFFFF',
               border: 'none',
               borderRadius: '8px',
-              padding: '6px 14px',
-              fontSize: '0.8rem',
+              padding: '5px 12px',
+              fontSize: '0.78rem',
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 2px 4px rgba(0, 77, 153, 0.25)'
+              boxShadow: '0 2px 4px rgba(0, 77, 153, 0.25)',
+              whiteSpace: 'nowrap'
             }}
           >
-            + Agendar Cita
+            + Agendar
           </button>
         </div>
       </div>
@@ -530,9 +531,12 @@ export const VitalityCalendarView: React.FC<VitalityCalendarViewProps> = ({
           display: 'flex',
           flexDirection: 'column',
           overflowY: 'auto',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
           position: 'relative'
         }}
       >
+        <div style={{ minWidth: '560px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* Cabecera de los 7 Días */}
         <div
           style={{
@@ -732,6 +736,7 @@ export const VitalityCalendarView: React.FC<VitalityCalendarViewProps> = ({
               </div>
             );
           })}
+        </div>
         </div>
       </div>
 

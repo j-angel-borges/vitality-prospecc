@@ -98,38 +98,38 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
       )}
 
       <div className="relative z-10 flex flex-col h-full">
-        <div className="p-4 sm:p-6 md:p-10 text-white text-center shrink-0">
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold drop-shadow-2xl">Acción Final</h2>
-          <p className="text-white/90 text-sm sm:text-lg md:text-xl drop-shadow-lg">Encargado: {data.salesRep}</p>
+        <div className="p-3 sm:p-6 text-white text-center shrink-0">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold drop-shadow-2xl">Acción Final</h2>
+          <p className="text-white/90 text-xs sm:text-base drop-shadow-lg">Encargado: {data.salesRep}</p>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 flex flex-col items-center justify-center">
-          <div className="bg-white/95 p-5 sm:p-8 md:p-10 rounded-2xl sm:rounded-3xl shadow-2xl max-w-xl w-full space-y-6 backdrop-blur-sm">
-            <div className="flex flex-col items-center space-y-3 sm:space-y-4">
-              <div className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 border-3 sm:border-4 border-primary rounded-2xl overflow-hidden p-2 sm:p-3 bg-white shadow-xl transition-transform hover:scale-105">
+          <div className="bg-white/95 p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl max-w-md w-full space-y-4 sm:space-y-6 backdrop-blur-sm">
+            <div className="flex flex-col items-center space-y-2 sm:space-y-3">
+              <div className="relative w-32 h-32 sm:w-44 sm:h-44 border-2 sm:border-3 border-primary rounded-xl overflow-hidden p-2 sm:p-3 bg-white shadow-lg transition-transform hover:scale-105">
                 {qrImage && (
                   <Image
                     src={qrImage.imageUrl}
                     alt={`Código QR de ${data.salesRep}`}
                     fill
-                    className="object-contain p-2 sm:p-4"
+                    className="object-contain p-1.5 sm:p-3"
                     data-ai-hint={qrImage.imageHint}
                   />
                 )}
               </div>
-              <p className="text-center font-bold text-primary text-base sm:text-lg md:text-xl">
+              <p className="text-center font-bold text-primary text-xs sm:text-base">
                 Escanea para agregarme a contactos
               </p>
             </div>
 
-            <div className="space-y-2 sm:space-y-3">
-              <Label htmlFor="notes" className="text-sm sm:text-base md:text-lg font-bold text-primary block">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="notes" className="text-xs sm:text-sm font-bold text-primary block">
                 Notas Adicionales
               </Label>
               <Textarea
                 id="notes"
                 placeholder="Escribe detalles importantes aquí..."
-                className="min-h-[80px] sm:min-h-[110px] md:min-h-[140px] text-sm sm:text-base p-3 sm:p-4 bg-white border-primary/20 rounded-xl shadow-inner focus:border-accent"
+                className="min-h-[70px] sm:min-h-[90px] text-xs sm:text-sm p-2.5 sm:p-3 bg-white border-primary/20 rounded-xl shadow-inner focus:border-accent"
                 value={data.notes}
                 onChange={(e) => onUpdate({ notes: e.target.value })}
               />
@@ -137,17 +137,17 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 shrink-0 max-w-xl mx-auto w-full">
+        <div className="p-3 sm:p-5 shrink-0 max-w-md mx-auto w-full">
           <Button
             onClick={handleFinish}
             disabled={isSubmitting}
-            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-13 sm:h-16 md:h-18 text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl shadow-2xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95"
+            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-12 sm:h-14 text-sm sm:text-lg font-bold rounded-xl sm:rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
           >
             {isSubmitting ? (
-              <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin" />
+              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
             ) : (
               <>
-                <Send className="h-6 w-6 sm:h-8 sm:w-8" />
+                <Send className="h-4 w-4 sm:h-5 sm:w-5" />
                 FINALIZAR Y ENVIAR
               </>
             )}

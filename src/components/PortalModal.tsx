@@ -274,7 +274,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
         {/* Modal Header */}
         <div
           style={{
-            padding: '18px 24px',
+            padding: '12px 16px',
             borderBottom: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
             display: 'flex',
             alignItems: 'center',
@@ -282,35 +282,36 @@ export const PortalModal: React.FC<PortalModalProps> = ({
             background: isDark ? '#1E293B' : '#F8FAFC'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
                 background: 'linear-gradient(135deg, #002244 0%, #004D99 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#FFFFFF',
-                boxShadow: '0 4px 10px rgba(0, 77, 153, 0.25)'
+                boxShadow: '0 4px 10px rgba(0, 77, 153, 0.25)',
+                flexShrink: 0
               }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h2 style={{ margin: 0, fontSize: '1.18rem', fontWeight: 800, letterSpacing: '-0.02em', color: isDark ? '#FFFFFF' : '#002244' }}>
-                  Portal Administrativo Vitality
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, letterSpacing: '-0.02em', color: isDark ? '#FFFFFF' : '#002244' }}>
+                  Portal Administrativo
                 </h2>
                 <span
                   style={{
-                    fontSize: '0.7rem',
+                    fontSize: '0.68rem',
                     fontWeight: 700,
                     textTransform: 'uppercase',
-                    padding: '2px 8px',
+                    padding: '2px 6px',
                     borderRadius: '999px',
                     background: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF',
                     color: isDark ? '#93C5FD' : '#004D99'
@@ -319,8 +320,8 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                   SuperAdmin
                 </span>
               </div>
-              <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: isDark ? '#94A3B8' : '#64748B' }}>
-                Control comercial de equipo, acceso a leads y traspasos individuales o en lote.
+              <p className="hidden xs:block" style={{ margin: '2px 0 0', fontSize: '0.76rem', color: isDark ? '#94A3B8' : '#64748B' }}>
+                Control comercial de equipo, acceso a leads y traspasos.
               </p>
             </div>
           </div>
@@ -349,30 +350,34 @@ export const PortalModal: React.FC<PortalModalProps> = ({
 
         {/* Navigation Tabs (Solo 2: Usuarios y Traspasos, reordenamiento eliminado) */}
         <div
+          className="touch-scroll-x"
           style={{
             display: 'flex',
-            padding: '10px 24px',
-            gap: '8px',
+            padding: '8px 14px',
+            gap: '6px',
             borderBottom: isDark ? '1px solid #1E293B' : '1px solid #F1F5F9',
-            background: isDark ? '#0F172A' : '#FFFFFF'
+            background: isDark ? '#0F172A' : '#FFFFFF',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch'
           }}
         >
           <button
             type="button"
             onClick={() => setActivePortalTab('users')}
             style={{
-              padding: '8px 16px',
+              padding: '6px 12px',
               borderRadius: '8px',
               border: 'none',
               cursor: 'pointer',
               fontWeight: activePortalTab === 'users' ? 700 : 500,
-              fontSize: '0.84rem',
+              fontSize: '0.8rem',
               background: activePortalTab === 'users' ? (isDark ? '#1E293B' : '#EFF6FF') : 'transparent',
               color: activePortalTab === 'users' ? (isDark ? '#60A5FA' : '#004D99') : (isDark ? '#94A3B8' : '#64748B'),
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              transition: 'all 0.15s ease'
+              transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap'
             }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -388,18 +393,19 @@ export const PortalModal: React.FC<PortalModalProps> = ({
             type="button"
             onClick={() => setActivePortalTab('transfers')}
             style={{
-              padding: '8px 16px',
+              padding: '6px 12px',
               borderRadius: '8px',
               border: 'none',
               cursor: 'pointer',
               fontWeight: activePortalTab === 'transfers' ? 700 : 500,
-              fontSize: '0.84rem',
+              fontSize: '0.8rem',
               background: activePortalTab === 'transfers' ? (isDark ? '#1E293B' : '#EFF6FF') : 'transparent',
               color: activePortalTab === 'transfers' ? (isDark ? '#60A5FA' : '#004D99') : (isDark ? '#94A3B8' : '#64748B'),
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              transition: 'all 0.15s ease'
+              transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap'
             }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -408,12 +414,12 @@ export const PortalModal: React.FC<PortalModalProps> = ({
               <path d="M7 23l-4-4 4-4"/>
               <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
             </svg>
-            <span>Traspaso & Copiado de Leads</span>
+            <span>Traspaso & Copiado</span>
           </button>
         </div>
 
         {/* Modal Body */}
-        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+        <div style={{ padding: '14px 16px', overflowY: 'auto', flex: 1 }}>
           {/* TAB 1: USERS & LEADS */}
           {activePortalTab === 'users' && (
             <div>

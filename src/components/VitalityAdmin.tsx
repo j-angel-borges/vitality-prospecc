@@ -2404,14 +2404,14 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                 </svg>
-                <span>Portal</span>
+                <span className="hidden sm:inline">Portal</span>
               </button>
             )}
             <button
               onClick={() => setViewMode('spreadsheet')}
               style={{
                 border: 'none',
-                padding: '5px 10px',
+                padding: '5px 8px',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontWeight: 600,
@@ -2424,15 +2424,16 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                 gap: '5px',
                 transition: 'all 0.15s ease'
               }}
+              title="Vista de hoja de cálculo"
             >
               <Icons.Table />
-              <span>Spread</span>
+              <span className="hidden sm:inline">Spread</span>
             </button>
             <button
               onClick={() => setViewMode('crm')}
               style={{
                 border: 'none',
-                padding: '5px 10px',
+                padding: '5px 8px',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontWeight: 600,
@@ -2445,15 +2446,16 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                 gap: '5px',
                 transition: 'all 0.15s ease'
               }}
+              title="Vista Kanban CRM"
             >
               <Icons.Kanban />
-              <span>Kanban</span>
+              <span className="hidden sm:inline">Kanban</span>
             </button>
-                        <button
+            <button
               onClick={() => setViewMode('campaigns')}
               style={{
                 border: 'none',
-                padding: '5px 10px',
+                padding: '5px 8px',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontWeight: 700,
@@ -2468,7 +2470,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
               title="Vista de Campañas WhatsApp"
             >
               <Icons.MessageCircle />
-              <span>Campañas</span>
+              <span className="hidden sm:inline">Campañas</span>
               {selectedLeadIds.length > 0 && (
                 <span
                   style={{
@@ -2488,7 +2490,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
               onClick={() => setViewMode('calendar')}
               style={{
                 border: 'none',
-                padding: '5px 10px',
+                padding: '5px 8px',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontWeight: 600,
@@ -2504,7 +2506,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
               title="Vista de calendario"
             >
               <Icons.Calendar />
-              <span>Calendario</span>
+              <span className="hidden sm:inline">Calendario</span>
             </button>
           </div>
 
@@ -2582,9 +2584,9 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
 
       {/* ── Filter & Columns Toolbar ──────────────────────────────────────── */}
       {viewMode !== 'campaigns' && viewMode !== 'calendar' && (
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
         {/* Search Input */}
-        <div style={{ position: 'relative', flex: '1', minWidth: '240px' }}>
+        <div style={{ position: 'relative', flex: '1 1 180px', minWidth: '160px' }}>
           <div style={{ position: 'absolute', left: '10px', top: '10px', color: '#94A3B8' }}>
             <Icons.Search />
           </div>
@@ -2592,12 +2594,12 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Buscar en ${activeTab === '__ALL__' ? 'todas las pestañas' : activeTab}...`}
+            placeholder={`Buscar en ${activeTab === '__ALL__' ? 'todas' : activeTab}...`}
             style={{
               width: '100%',
-              padding: '8px 10px 8px 34px',
+              padding: '7px 10px 7px 32px',
               borderRadius: '8px',
-              border: isDark ? '1px solid #334155' : '1px solid #CBD5E1', background: isDark ? '#1E293B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#1E293B', outline: 'none', fontSize: '0.85rem'
+              border: isDark ? '1px solid #334155' : '1px solid #CBD5E1', background: isDark ? '#1E293B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#1E293B', outline: 'none', fontSize: '0.82rem'
             }}
           />
         </div>
@@ -2617,20 +2619,21 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
               ? (isDark ? '#FBBF24' : '#B45309') 
               : (isDark ? '#94A3B8' : '#64748B'),
             borderRadius: '8px',
-            padding: '6px 12px',
-            fontSize: '0.8rem',
+            padding: '5px 10px',
+            fontSize: '0.78rem',
             fontWeight: 700,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '5px',
             boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-            transition: 'all 0.2s ease'
+            transition: 'all 0.2s ease',
+            whiteSpace: 'nowrap'
           }}
           title={onlyUnsavedContacts ? 'Mostrando solo contactos no agendados (clic para ver todos)' : 'Filtrar para ver únicamente prospectos que no están en tu agenda'}
         >
           <Icons.ContactUnsaved />
-          <span>{onlyUnsavedContacts ? 'Filtro: No Agendados' : 'Solo No Agendados'}</span>
+          <span>{onlyUnsavedContacts ? 'No Agendados' : 'Solo No Agendados'}</span>
         </button>
 
         {/* Active Column Filters Indicator & Reset */}
@@ -2822,7 +2825,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
       </div>
 
       {/* ── Middle Scrollable Content Area ─────────────────────────────────── */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '0 16px', overflow: 'hidden' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left))', overflow: 'hidden' }}>
         {/* ── VIEW 1: SPREADSHEET TABLE ─────────────────────────────────────── */}
         {viewMode === 'spreadsheet' && (
           <div
@@ -3457,15 +3460,32 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
         </div>
       )}
 
-      {/* ── VIEW 2: CRM KANBAN PIPELINE ───────────────────────────────────── */}
+      {/* ── VIEW 2: CRM KANBAN PIPELINE (Horizontal Snap Swipe on Mobile & Ergonomic Cards) ── */}
       {viewMode === 'crm' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', flex: 1, overflowY: 'auto' }}>
+        <div
+          className="kanban-board-container"
+          style={{
+            display: 'flex',
+            gap: '12px',
+            flex: 1,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            paddingBottom: '8px',
+            WebkitOverflowScrolling: 'touch',
+            scrollSnapType: 'x proximity'
+          }}
+        >
           {crmStages.map(stage => {
             const stageLeads = filteredLeads.filter(l => (getLeadField(l, 'estadoCrm') || 'nuevo') === stage.key);
             return (
               <div
                 key={stage.key}
                 style={{
+                  minWidth: '270px',
+                  width: 'calc(100vw - 48px)',
+                  maxWidth: '320px',
+                  flexShrink: 0,
+                  scrollSnapAlign: 'start',
                   background: isDark ? '#0F172A' : '#FFFFFF',
                   borderRadius: '12px',
                   border: isDark ? '1.5px solid #1E293B' : '1.5px solid #E2E8F0',
@@ -3473,7 +3493,9 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                   padding: '12px',
                   display: 'flex',
                   flexDirection: 'column',
-                  maxHeight: '75vh',
+                  maxHeight: '100%',
+                  height: '100%',
+                  boxSizing: 'border-box',
                   transition: 'all 0.25s ease'
                 }}
               >
