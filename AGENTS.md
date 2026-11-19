@@ -1,37 +1,65 @@
-# 🤖 Vitality Prospecc & CRM — Directivas Maestras para Agentes (AGY)
+# 👑 Vitality — Directivas Maestras de Negocio y Reglas para Agentes (AGY)
 
-> **Documento de Contextualización Canónica (SSOT):**  
-> Cualquier agente o sesión de Antigravity CLI (`agy`) que opere en este repositorio (sea en macOS, Windows o Linux) DEBE leer y aplicar estas directivas como su fuente de verdad técnica y operativa.
-
----
-
-## 1. 📌 Identidad y Propósito del Proyecto
-* **Nombre:** Vitality Prospecc & CRM Suite.
-* **Propósito:** Plataforma web progresiva (PWA) de prospección comercial, gestión de leads y seguimiento automatizado de demostraciones para asesores de **Royal Prestige / Vitality**.
-* **Stack Tecnológico:**
-  - **Frontend:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons.
-  - **Backend / BaaS:** Google Firebase (Firebase Auth, Cloud Firestore, Firebase Hosting).
-  - **Integraciones:** Google Calendar API v3 (agendamiento interactivo), Google People API (agenda de contactos).
-  - **Extensión Asistente:** `extensions/vitality-ws-dispatcher` (Google Chrome Manifest V3 para WhatsApp Web).
+> **Documento Canónico SSOT (Single Source of Truth):**  
+> Cualquier agente o sesión de Antigravity CLI (`agy`) que opere en este repositorio (sea en macOS, Windows o Linux) DEBE leer y aplicar estas directivas como su fuente de verdad técnica, comercial y operativa.
 
 ---
 
-## 2. ☁️ Infraestructura GCP y Firebase
+## 🚨 REGLA CERO: AISLAMIENTO TOTAL — ESTO ES EXCLUSIVAMENTE VITALITY
+* **PROHIBICIÓN ESTRICTA:** Queda terminantemente prohibido recomendar, importar, mezclar o hacer referencia a conceptos, sistemas, repositorios o marcas de **QUARZ** o **ZENTRY** en este entorno.
+* **ENTIDAD:** Distribución Oficial Autorizada de **Royal Prestige / Vitality**.
+* Todo el código, copy, plantillas de mensajes, CRM y herramientas asociadas pertenecen única y exclusivamente al ecosistema de **Vitality y Royal Prestige**.
 
-### 2.1 Identificadores de Proyectos Canónicos
+---
+
+## 1. 👥 Actores Reales y Roles del Negocio
+* **Directora Líder & Distribuidora:** **Ricfel** (Madre de José Ángel Borges).
+* **Director Comercial y de Sistemas:** **José Ángel Borges**.
+* **Aliada Estratégica:** **Angie Yovera** (Red de contactos de corredores de seguros para reclutamiento comercial).
+* **Regla Anti-Alucinación:** NUNCA confundir a Angie Yovera con la madre de José Ángel (la madre y Directora Líder es **Ricfel**).
+
+---
+
+## 2. 💼 Modelo de Negocio y Finanzas
+* **Sector:** Salud familiar, nutrición preventiva, alta cocina y venta directa de alta gama.
+* **Ticket Promedio:** ~S/ 7,000 por cliente.
+* **Márgenes:** 35% en compras financiadas y 50% en compras al contado.
+* **Línea de Producto:** Utensilios de acero grado quirúrgico 316L (5 capas, aro silicromático de sello al vacío, válvula *Ready Temp*), sistemas de purificación de agua y extracción de nutrientes.
+* **Metodología de Venta:** Demostración culinaria experiencial en casa ("Ver para Creer", prueba de bicarbonato eliminando contaminantes de teflón, níquel y aluminio).
+* **Línea de Reclutamiento:** Jóvenes (18-25 años en San Borja / Lima Metropolitana) orientados a formación ejecutiva, comisiones de alto impacto y liderazgo.
+
+---
+
+## 3. 🛠️ Suite de Herramientas Asociadas de Vitality
+El ecosistema digital de Vitality se compone de:
+
+1. **Vitality Prospecc & CRM (`vitality-prospecc`):**
+   - Portal web PWA para captura de leads en eventos (Expo Maternidad, ferias, referidos).
+   - CRM en tiempo real con segmentación por asesor.
+   - Módulo interactivo de Google Calendar para agendar demos de cocina en casa.
+2. **Cotizador Comercial de Royal Prestige:**
+   - Herramienta para cálculo de presupuestos, financiamiento, cuotas mensuales, combos y sets de cocina para clientes en demostración.
+3. **Vitality WS Dispatcher (`extensions/vitality-ws-dispatcher`):**
+   - Extensión de Chrome (Manifest V3) para automatizar seguimientos en WhatsApp Web sin marcas de agua, con jitter humano anti-baneo (45s - 110s) y auto-parada ante respuestas de prospectos.
+
+---
+
+## 4. ☁️ Infraestructura GCP y Firebase
+
+### 4.1 Identificadores de Proyectos Canónicos
 | Proyecto ID | Nombre en Consola | Propósito / URL |
 | :--- | :--- | :--- |
 | **`studio-4949838222-b0ffc`** | Vitality-prospec | **Hosting Principal & Prospección:** `https://vitality-prospecc.web.app` |
 | **`studio-2768936384-2ae9c`** | Vitality-crm | Base de datos CRM y módulo comercial complementario. |
 
-### 2.2 Usuarios e Identidades en GCP / IAM
+### 4.2 Usuarios y Permisos en GCP / IAM
 - **`mipropiadinastia@gmail.com`**: Propietario (Owner) y SuperAdmin técnico de ambos proyectos.
 - **`r.olaizola@gmail.com`**: Editor y Administrador de Firebase (`roles/editor`, `roles/firebase.admin`) con permisos completos de desarrollo y despliegue desde Mac.
 - **`jangelborges@gmail.com`**: Asesor comercial y operador en plataforma.
 
 ---
 
-## 3. 🔐 Matriz de Seguridad y Roles en la Aplicación (RBAC)
+## 5. 🔐 Matriz de Seguridad y Roles en la Aplicación (RBAC)
 
 Al autenticarse mediante Google OAuth en la aplicación web, el sistema aplica segmentación estricta de datos según el email:
 
@@ -47,24 +75,7 @@ Al autenticarse mediante Google OAuth en la aplicación web, el sistema aplica s
 
 ---
 
-## 4. 🧩 Arquitectura de Componentes Clave
-
-* **Panel Administrativo y Leads:** `src/components/VitalityAdmin.tsx`
-  - Filtros por encargado/asesor, descarga de CSV con tooltip breve (máx 3 palabras), carga de gestiones y notas.
-* **Calendario Google Interactivo:** `src/components/VitalityCalendarView.tsx`
-  - Drag-and-drop y redimensionamiento de bloques de hora como en Google Calendar.
-  - Persistencia de `google_access_token` en LocalStorage con purga y reactivación ante error `401 UNAUTHENTICATED`.
-* **Despachador de Campañas & WhatsApp:** `src/components/TickToolModal.tsx`
-  - Constructor de campañas con mensajes dinámicos, árbol de follow-ups y jitter anti-baneo (45s - 110s).
-  - **Resiliencia de Borradores:** Guarda automáticamente el progreso en `localStorage` si el usuario cambia de vista o recarga, evitando pérdida de formularios.
-  - Comunicación bidireccional con la extensión mediante `window.postMessage` emitiendo eventos duales (`Vitality_TICKTOOL_*` y `ZENTRY_TICKTOOL_*`).
-* **Extensión de WhatsApp Web:** `extensions/vitality-ws-dispatcher/`
-  - `content.js`: Inyecta el auto-envío por URL (`/send?phone=...&text=...`), raspador de agenda `#pane-side`, selector posicional del botón Enviar y detector de respuestas entrantes (Inbound Stop).
-  - Cero marcas de agua.
-
----
-
-## 5. 🛠️ Protocolo Operativo y Comandos Estándar
+## 6. 🛠️ Protocolo Operativo y Comandos Estándar
 
 ### Compilación y Verificación
 ```bash
@@ -86,9 +97,10 @@ firebase deploy --only hosting
 
 ---
 
-## 6. 🛡️ Guardarraíles y Reglas Inviolables para Agentes
+## 7. 🛡️ Guardarraíles Inviolables para Agentes
 
-1. **Preservación de Datos:** NUNCA sobrescribas ni borres leads o colecciones de Firestore sin filtros exactos. Toda modificación a la estructura debe mantener compatibilidad hacia atrás.
-2. **Microcopy Conciso:** Todo botón con solo icono o forma SVG debe tener un atributo `title` descriptivo de **máximo 3 palabras**.
-3. **Aislamiento por Correo:** No relajes las reglas de RBAC; los asesores solo ven sus propios leads.
-4. **Historial Técnico:** Ante dudas sobre el funcionamiento de Google Calendar, el despachador de WhatsApp o los errores corregidos anteriormente, consulta obligatoriamente [WALKTHROUGH_TECNICO_SOLUCIONES.md](./WALKTHROUGH_TECNICO_SOLUCIONES.md).
+1. **Aislamiento Total de Marca:** Nunca sugerir, usar ni mezclar términos, código ni plantillas de Zentry o Quarz.
+2. **Preservación de Datos:** NUNCA sobrescribas ni borres leads o colecciones de Firestore sin filtros exactos. Toda modificación a la estructura debe mantener compatibilidad hacia atrás.
+3. **Microcopy Conciso:** Todo botón con solo icono o forma SVG debe tener un atributo `title` descriptivo de **máximo 3 palabras**.
+4. **Aislamiento por Correo:** No relajes las reglas de RBAC; los asesores solo ven sus propios leads.
+5. **Historial Técnico:** Ante dudas sobre el funcionamiento de Google Calendar, el despachador de WhatsApp o los errores corregidos anteriormente, consulta obligatoriamente [WALKTHROUGH_TECNICO_SOLUCIONES.md](./WALKTHROUGH_TECNICO_SOLUCIONES.md).

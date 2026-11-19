@@ -3,12 +3,12 @@
  * Service Worker (background.js) — v1.2.0
  *
  * Responsabilidades:
- * 1. Sincronizar la cola `whatsapp_outbox` y `whatsapp_campaigns` desde Firestore (zentryos / quarz-group)
- *    o recibir órdenes directas desde QZ-Hub (`qz-hub-app.web.app`, `quarz-group.web.app`, `hub.quarz.online`) y Zentry CRM.
+ * 1. Sincronizar la cola `whatsapp_outbox` y `whatsapp_campaigns` desde Firestore (vitality-prospecc)
+ *    o recibir órdenes directas desde Vitality Prospecc (`Vitality Prospecc-app.web.app`, `quarz-group.web.app`, `hub.quarz.online`) y Vitality CRM.
  * 2. Despachar el PRIMER mensaje de una campaña nueva o envío individual de inmediato (2 seg),
  *    y aplicar el Jitter Anti-Baneo (45s a 110s) a partir del 2do contacto en adelante.
  * 3. Sincronizar la Agenda de Contactos / Chats de WhatsApp Web (`waContacts`) extraída por `content.js`
- *    para que QZ-Hub permita buscar cualquier contacto del WhatsApp y hacer envíos individuales.
+ *    para que Vitality Prospecc permita buscar cualquier contacto del WhatsApp y hacer envíos individuales.
  * 4. Garantizar CERO marcas de agua en cada mensaje despachado.
  * 5. Detectar respuestas entrantes (Inbound) desde `content.js`, marcar el prospecto como `replied`
  *    en Firestore y abortar (`cancelled`) cualquier follow-up pendiente para ese número.
@@ -128,7 +128,7 @@ async function getDispatcherState() {
   return {
     isPaused: data.isPaused !== undefined ? Boolean(data.isPaused) : true,
     waConnected: Boolean(data.waConnected),
-    activeCampaignName: data.activeCampaignName || 'Campaña Expo Maternidad / QZ-Hub',
+    activeCampaignName: data.activeCampaignName || 'Campaña Expo Maternidad / Vitality Prospecc',
     activeCampaignId: data.activeCampaignId || '',
     dailyDispatchedCount,
     dailyDateKey: today,
@@ -668,18 +668,18 @@ async function handleInboundReplyDetected(rawPhone, leadName = '') {
   return { cancelledFollowUps: cancelledCount };
 }
 
-// Reinyecta automáticamente content.js en todas las pestañas abiertas de WhatsApp Web, QZ-Hub y Zentry CRM
+// Reinyecta automáticamente content.js en todas las pestañas abiertas de WhatsApp Web, Vitality Prospecc
 // cuando el usuario recarga la extensión en chrome://extensions, sin obligarlo a pulsar F5.
 async function reinjectContentScriptIntoOpenTabs() {
   try {
     const tabs = await chrome.tabs.query({
       url: [
         'https://web.whatsapp.com/*',
-        'https://hub.quarz.online/*',
-        'https://qz-hub-app.web.app/*',
-        'https://qz-hub-app.firebaseapp.com/*',
-        'https://quarz-group.web.app/*',
-        'https://quarz-group.firebaseapp.com/*',
+        
+        'https://Vitality Prospecc-app.web.app/*',
+        'https://Vitality Prospecc-app.firebaseapp.com/*',
+        
+        
         'https://vitality-prospecc.web.app/*',
         'https://vitality-prospecc.firebaseapp.com/*',
         'https://studio-4949838222-b0ffc.web.app/*',
@@ -871,7 +871,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         case 'TICKTOOL_PUSH_CAMPAIGN_QUEUE': {
-          // Recibe cola directamente desde QZ-Hub o Zentry CRM (incluyendo attachments en base64)
+          // Recibe cola directamente desde Vitality Prospecc o Vitality CRM (incluyendo attachments en base64)
           const incomingItems = Array.isArray(message.items) ? message.items : [];
           const current = await getDispatcherState();
           const mapById = new Map(current.outboxQueue.map(i => [i.id, i]));
@@ -1080,7 +1080,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               : current.lastDispatchedPhone,
             lastDispatchedAt: isImmediateInChat ? nowIso : current.lastDispatchedAt
           });
-          // Registrar inmediatamente en Firestore whatsapp_outbox para que aparezca en la Cola Outbox de QZ-Hub y Zentry CRM
+          // Registrar inmediatamente en Firestore whatsapp_outbox para que aparezca en la Cola Outbox de Vitality Prospecc
           await createFirestoreOutboxDoc(schedItem);
 
           if (!isImmediateInChat) {

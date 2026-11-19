@@ -245,21 +245,21 @@ const DEFAULT_MESSAGE_TEMPLATES: CustomCampaignTemplate[] = [
   {
     id: 'tpl-expo-maternidad',
     title: 'Post-Evento Expo Maternidad',
-    body: 'Hola {First Name}, te saluda José Ángel del equipo de ZentryOS. Qué gusto haber conversado contigo en {Origen}. Te escribo al {Phone} para compartirte el acceso a la evaluación privada de bienestar digital para tu familia en {Distrito}. ¿Te queda bien si te envío el resumen por aquí?',
+    body: 'Hola {First Name}, te saluda José Ángel del equipo de Vitality - Royal Prestige. Qué gusto haber conversado contigo en {Origen}. Te escribo al {Phone} para compartirte el acceso a la propuesta de cocina saludable y nutrición para tu familia en {Distrito}. ¿Te queda bien si te envío los detalles por aquí?',
     attachments: [],
     createdAt: 1700000000000
   },
   {
     id: 'tpl-demo-virtual',
     title: 'Agendar Demo Virtual',
-    body: 'Hola {First Name}, espero que todo vaya excelente en casa. Revisando tu ficha de {Origen}, reservamos 2 cupos esta semana para mostrarte en vivo cómo ZentryOS protege la atención de tus hijos sin peleas en casa. ¿Prefieres jueves 7:30 pm o sábado por la mañana?',
+    body: 'Hola {First Name}, espero que todo vaya excelente en casa. Revisando tu ficha de {Origen}, reservamos 2 cupos esta semana para mostrarte en vivo cómo cocinar saludablemente y sin grasas con Royal Prestige. ¿Prefieres jueves 7:30 pm o sábado por la mañana?',
     attachments: [],
     createdAt: 1700000001000
   },
   {
     id: 'tpl-reactivacion-directa',
     title: 'Reactivación Directa',
-    body: '¡Hola {Display Name}! Te escribimos desde ZentryOS. Sabemos que la rutina familiar es intensa; solo quería confirmar si pudiste revisar la propuesta o si prefieres que coordinemos una breve llamada de 5 minutos.',
+    body: '¡Hola {Display Name}! Te escribimos de Vitality - Royal Prestige. Sabemos que la rutina familiar es intensa; solo quería confirmar si pudiste revisar la propuesta o si prefieres que coordinemos una breve llamada de 5 minutos.',
     attachments: [],
     createdAt: 1700000002000
   }
@@ -587,7 +587,7 @@ export const TickToolModal: React.FC<TickToolModalProps> = ({
   // Step 2: Message & Follow-ups State
   const [campaignName, setCampaignName] = useState<string>(() => {
     if (savedDraft?.campaignName) return savedDraft.campaignName;
-    return `Campaña Zentry — ${initialSourceTab || 'Expo M'}`;
+    return `Campaña Vitality — ${initialSourceTab || 'Expo M'}`;
   });
   const [initialMessage, setInitialMessage] = useState<string>(() => {
     if (savedDraft?.initialMessage !== undefined && savedDraft?.initialMessage !== null) return savedDraft.initialMessage;
@@ -607,7 +607,7 @@ export const TickToolModal: React.FC<TickToolModalProps> = ({
       delayMs: 24 * 3600 * 1000,
       customDateTime: toLocalDateTimeInputValue(Date.now() + 24 * 3600 * 1000),
       messageTemplate:
-        'Hola {First Name}, solo pasaba por aquí para saber si pudiste ver mi mensaje anterior sobre ZentryOS. Quedo atento por si tienes alguna consulta.'
+        'Hola {First Name}, solo pasaba por aquí para saber si pudiste ver mi mensaje anterior sobre Vitality - Royal Prestige. Quedo atento por si tienes alguna consulta.'
     }
     ];
   });
@@ -720,7 +720,7 @@ export const TickToolModal: React.FC<TickToolModalProps> = ({
       localStorage.removeItem(LS_CAMPAIGN_DRAFT);
     }
     setWizardStep(1);
-    setCampaignName(`Campaña Zentry — ${initialSourceTab || 'Expo M'}`);
+    setCampaignName(`Campaña Vitality — ${initialSourceTab || 'Expo M'}`);
     setInitialMessage(templates[0]?.body || DEFAULT_MESSAGE_TEMPLATES[0].body);
     setSelectedIds(new Set(preselectedLeadIds));
     showToast('Borrador descartado');
@@ -954,7 +954,7 @@ export const TickToolModal: React.FC<TickToolModalProps> = ({
     }
 
     const result = await createCampaignAndOutbox({
-      name: campaignName.trim() || 'Campaña Zentry WS',
+      name: campaignName.trim() || 'Campaña Vitality WS',
       audienceSource: audienceMode === 'tab' ? selectedOriginTab : 'Selección Manual',
       leads: validSelectedLeads,
       initialMessage,
@@ -1022,7 +1022,7 @@ export const TickToolModal: React.FC<TickToolModalProps> = ({
   const handleSimulateInboundReply = async (item: WhatsAppOutboxItem) => {
     const res = await handleInboundProspectReply(
       item.normalizedPhone,
-      `¡Hola! Sí me interesa agendar la demo de ZentryOS para mis hijos.`
+      `¡Hola! Sí me interesa agendar la demo de cocina y salud de Royal Prestige para mi familia.`
     );
     setSimLog((prev) => [
       `[Inbound Stop] Respuesta detectada de ${item.displayName} +${item.normalizedPhone}.`,

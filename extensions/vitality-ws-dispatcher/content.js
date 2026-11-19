@@ -12,13 +12,13 @@
  *         de texto `"Escribe un mensaje"`, abre el Modal de Envío Individual / Programación Rápida
  *         con selector de Agenda de Contactos de WhatsApp Web y CERO marcas de agua.
  *    - Captura automáticamente la Agenda de Contactos y Chats de WhatsApp Web (`#pane-side`)
- *      y la sincroniza con QZ-Hub para que el usuario pueda buscar cualquier contacto de su
+ *      y la sincroniza con Vitality Prospecc para que el usuario pueda buscar cualquier contacto de su
  *      WhatsApp Web y mandarle un mensaje individual automático o programado.
  *    - Ejecuta el despacho automático sin marcas de agua (tanto por número `+51...` vía URL
  *      como por Nombre de Contacto buscando en la barra lateral de WhatsApp Web).
  *    - Monitorea mensajes entrantes (`message-in` / `data-id^="false_"`) mediante `MutationObserver`
  *      para disparar la parada automática de follow-ups (`replied` / `cancelled` en Firestore).
- * B) En `https://hub.quarz.online/*`, `https://qz-hub-app.web.app/*`, `https://quarz-group.web.app/*`
+ * B) En `https://hub.quarz.online/*`, `https://Vitality Prospecc-app.web.app/*`, `https://quarz-group.web.app/*`
  *    y `https://Vitality-prospecc.web.app/*`:
  *    - Actúa como puente bidireccional en tiempo real entre Tick Tool y el Service Worker
  *      local de esa sesión de Chrome.
@@ -69,7 +69,7 @@
 
   const isWhatsAppWeb = window.location.hostname.includes('web.whatsapp.com');
 
-  // ── CONTEXTO B: PUENTE CON QZ-HUB Y Vitality CRM ──────────────────────────────
+  // ── CONTEXTO B: PUENTE CON Vitality Prospecc Y Vitality CRM ──────────────────────────────
   if (!isWhatsAppWeb) {
     window.document.documentElement.setAttribute('data-Vitality-ticktool-ext', 'active');
 
@@ -207,7 +207,7 @@
       window.removeEventListener('message', hubMessageListener);
     };
 
-    // Emitir un PONG automático apenas carga el content script para que QZ-Hub detecte la extensión al instante
+    // Emitir un PONG automático apenas carga el content script para que Vitality Prospecc detecte la extensión al instante
     setTimeout(() => {
       safeRuntimeSendMessage({ type: 'TICKTOOL_GET_STATUS' }, response => {
         window.postMessage(
@@ -1943,7 +1943,7 @@
     bar.id = 'Vitality-wa-topbar';
     bar.innerHTML = `
       <div class="ztt-wa-tabs">
-        <span class="ztt-wa-brand" title="Conectado a QZ-Hub & Vitality CRM sin marcas de agua">
+        <span class="ztt-wa-brand" title="Conectado a Vitality Prospecc & Vitality CRM sin marcas de agua">
           🟢 Tick Tool WS v1.3
         </span>
         <button type="button" class="ztt-wa-tab active" data-filter="todos">Todos</button>
@@ -1957,8 +1957,8 @@
         <button type="button" class="ztt-wa-action-btn primary" id="ztt-wa-open-scheduler-top">
           👤 Envío Individual / Programar
         </button>
-        <button type="button" class="ztt-wa-action-btn" id="ztt-wa-open-qzhub" title="Abrir panel de campañas en QZ-Hub">
-          🚀 QZ-Hub
+        <button type="button" class="ztt-wa-action-btn" id="ztt-wa-open-qzhub" title="Abrir panel de campañas en Vitality Prospecc">
+          🚀 Vitality Prospecc
         </button>
       </div>
     `;
@@ -1981,7 +1981,7 @@
     const openHubBtn = bar.querySelector('#ztt-wa-open-qzhub');
     if (openHubBtn) {
       openHubBtn.addEventListener('click', () => {
-        window.open('https://qz-hub-app.web.app/#prospeccion', '_blank');
+        window.open('https://Vitality Prospecc-app.web.app/#prospeccion', '_blank');
       });
     }
   }
