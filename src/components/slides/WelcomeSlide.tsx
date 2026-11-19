@@ -19,14 +19,14 @@ export function WelcomeSlide({ onStart }: WelcomeSlideProps) {
       {/* Top Action Bar with PWA Install & Admin */}
       <div className="absolute top-4 sm:top-6 inset-x-0 z-30 px-4 sm:px-6 flex items-center justify-between max-w-xl mx-auto">
         <InstallAppButton variant="badge" />
-        <Link href="/admin/">
+        <Link href="/">
           <Button 
             variant="outline" 
             size="sm"
             className="border-accent/80 text-accent hover:bg-accent/10 bg-black/40 backdrop-blur-md font-bold tracking-widest text-xs h-8 px-4 rounded-full transition-all active:scale-95 shadow-sm"
           >
             <Lock className="h-3 w-3 mr-1.5" />
-            ADMIN
+            ERP
           </Button>
         </Link>
       </div>

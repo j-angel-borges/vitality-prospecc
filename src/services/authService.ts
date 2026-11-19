@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-export type UserRole = 'superadmin' | 'director' | 'sales_rep';
+export type UserRole = 'ultra_admin' | 'superadmin' | 'sales_rep';
 
 export interface CrmUserProfile {
   uid: string;
@@ -93,20 +93,27 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
   let profile: CrmUserProfile;
 
   const emailLower = (user.email || '').toLowerCase();
-  const isSuperAdminEmail = SUPERADMIN_EMAILS.some(e => emailLower.includes(e.toLowerCase()));
-
-  // Clasificación de Asesores:
-  // jangelborges@gmail.com -> Jose Angel
-  // r.olaizola@gmail.com   -> Ricfel
+  const isUltraAdmin = emailLower === 'mipropiadinastia@gmail.com';
   const isJoseAngel = emailLower.includes('jangelborges') || (customAdvisorName ? /jose|angel/i.test(customAdvisorName) : false);
   const isRicfel = emailLower.includes('r.olaizola') || emailLower.includes('ricfel') || (customAdvisorName ? /ricfel/i.test(customAdvisorName) : false);
 
   const cleanCustom = (customAdvisorName || '').trim();
-  const assignedRep = isSuperAdminEmail
-    ? 'ALL'
-    : (isRicfel ? 'Ricfel' : (isJoseAngel ? 'Jose Angel' : (cleanCustom || 'Jose Angel')));
+  let assignedRole: UserRole = 'sales_rep';
+  let assignedRep = 'Jose Angel';
 
-  const assignedRole: UserRole = isSuperAdminEmail ? 'superadmin' : 'sales_rep';
+  if (isUltraAdmin) {
+    assignedRole = 'ultra_admin';
+    assignedRep = 'ALL';
+  } else if (isRicfel) {
+    assignedRole = 'superadmin';
+    assignedRep = 'Ricfel';
+  } else if (isJoseAngel) {
+    assignedRole = 'superadmin';
+    assignedRep = 'Jose Angel';
+  } else {
+    assignedRole = 'sales_rep';
+    assignedRep = cleanCustom || user.displayName || 'Asesor Comercial';
+  }
 
   if (snap.exists()) {
     profile = snap.data() as CrmUserProfile;
@@ -139,9 +146,9 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
       email: user.email || '',
       displayName: cleanCustom 
         ? cleanCustom 
-        : (isSuperAdminEmail 
-          ? 'Super Admin (Dinastía)' 
-          : (isJoseAngel ? 'José Angel (Asesor)' : (isRicfel ? 'Ricfel (Asesora)' : (user.displayName || 'Asesor Comercial')))),
+        : (isUltraAdmin 
+          ? 'Ultra Admin (Dinastía)' 
+          : (isJoseAngel ? 'José Angel (SuperAdmin)' : (isRicfel ? 'Ricfel (SuperAdmin)' : (user.displayName || 'Asesor Comercial')))),
       photoURL: user.photoURL || undefined,
       role: assignedRole,
       assignedRepName: assignedRep,
@@ -177,22 +184,33 @@ export async function getUserProfile(uid: string, email?: string | null): Promis
     }
 
     const emailLower = (email || '').toLowerCase();
-    const isSuperAdminEmail = SUPERADMIN_EMAILS.some(e => emailLower.includes(e.toLowerCase()));
+    const isUltraAdmin = emailLower === 'mipropiadinastia@gmail.com';
     const isJoseAngel = emailLower.includes('jangelborges');
     const isRicfel = emailLower.includes('r.olaizola') || emailLower.includes('ricfel');
 
-    const assignedRep = isSuperAdminEmail
-      ? 'ALL'
-      : (isRicfel ? 'Ricfel' : 'Jose Angel');
+    let assignedRole: UserRole = 'sales_rep';
+    let assignedRep = 'Jose Angel';
 
-    const assignedRole: UserRole = isSuperAdminEmail ? 'superadmin' : 'sales_rep';
+    if (isUltraAdmin) {
+      assignedRole = 'ultra_admin';
+      assignedRep = 'ALL';
+    } else if (isRicfel) {
+      assignedRole = 'superadmin';
+      assignedRep = 'Ricfel';
+    } else if (isJoseAngel) {
+      assignedRole = 'superadmin';
+      assignedRep = 'Jose Angel';
+    } else {
+      assignedRole = 'sales_rep';
+      assignedRep = 'Asesor Comercial';
+    }
 
     const defaultProfile: CrmUserProfile = {
       uid,
       email: email || '',
-      displayName: isSuperAdminEmail 
-        ? 'Super Admin (Dinastía)' 
-        : (isJoseAngel ? 'José Angel (Asesor)' : (isRicfel ? 'Ricfel (Asesora)' : 'Usuario Vitality')),
+      displayName: isUltraAdmin 
+        ? 'Ultra Admin (Dinastía)' 
+        : (isJoseAngel ? 'José Angel (SuperAdmin)' : (isRicfel ? 'Ricfel (SuperAdmin)' : 'Asesor Vitality')),
       role: assignedRole,
       assignedRepName: assignedRep,
       lastLogin: serverTimestamp()
@@ -204,6 +222,15 @@ export async function getUserProfile(uid: string, email?: string | null): Promis
     console.warn('Error obteniendo perfil de usuario:', e);
     return null;
   }
+}
+
+/**
+ * Elimina un usuario de la colección crm_users en Firestore
+ */
+export async function deleteCrmUser(uid: string): Promise<void> {
+  const { deleteDoc } = await import('firebase/firestore');
+  const userDocRef = doc(db, 'crm_users', uid);
+  await deleteDoc(userDocRef);
 }
 
 /**

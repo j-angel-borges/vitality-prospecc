@@ -89,12 +89,15 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1.8rem',
               border: '1px solid rgba(255, 255, 255, 0.25)',
               boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15)'
             }}
           >
-            💎
+            <img
+              src="/vitality_symbol.png"
+              alt="Vitality"
+              style={{ width: '38px', height: '38px', objectFit: 'contain' }}
+            />
           </div>
           <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
             VITALITY CRM
@@ -163,35 +166,49 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
                     type="button"
                     onClick={() => setAdvisorName('Ricfel Olaizola')}
                     style={{
-                      padding: '5px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #E2E8F0',
-                      background: advisorName === 'Ricfel Olaizola' ? '#F5F3FF' : (isDark ? '#1E293B' : '#F1F5F9'),
-                      color: advisorName === 'Ricfel Olaizola' ? '#7C3AED' : (isDark ? '#94A3B8' : '#475569'),
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
+                      background: advisorName === 'Ricfel Olaizola' ? (isDark ? 'rgba(124, 58, 237, 0.25)' : '#F5F3FF') : (isDark ? '#1E293B' : '#F1F5F9'),
+                      color: advisorName === 'Ricfel Olaizola' ? (isDark ? '#C4B5FD' : '#7C3AED') : (isDark ? '#94A3B8' : '#475569'),
                       fontSize: '0.76rem',
                       fontWeight: 700,
                       cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    👩‍💼 Ricfel Olaizola
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>Ricfel Olaizola</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setAdvisorName('Jose Angel Borges')}
                     style={{
-                      padding: '5px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #E2E8F0',
-                      background: advisorName === 'Jose Angel Borges' ? '#EFF6FF' : (isDark ? '#1E293B' : '#F1F5F9'),
-                      color: advisorName === 'Jose Angel Borges' ? '#004D99' : (isDark ? '#94A3B8' : '#475569'),
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
+                      background: advisorName === 'Jose Angel Borges' ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#EFF6FF') : (isDark ? '#1E293B' : '#F1F5F9'),
+                      color: advisorName === 'Jose Angel Borges' ? (isDark ? '#93C5FD' : '#004D99') : (isDark ? '#94A3B8' : '#475569'),
                       fontSize: '0.76rem',
                       fontWeight: 700,
                       cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    👨‍💼 Jose Angel Borges
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>Jose Angel Borges</span>
                   </button>
                 </div>
               </div>

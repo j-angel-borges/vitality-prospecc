@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "studio-2768936384-2ae9c"
+  },
+  "targets": {
+    "studio-2768936384-2ae9c": {
+      "hosting": {
+        "sets-vitality": [
+          "sets-vitality"
+        ]
+      }
+    }
+  }
+}

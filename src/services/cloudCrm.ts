@@ -265,8 +265,17 @@ export async function saveCloudTabsOrder(tabs: string[]): Promise<void> {
 }
 
 /**
- * Actualiza en lote múltiples leads en Firestore
+ * Crea en lote múltiples leads en Firestore
  */
+export async function batchCreateCloudLeads(leads: LeadData[]): Promise<void> {
+  const { writeBatch } = await import('firebase/firestore');
+  const batch = writeBatch(firestoreDb);
+  for (const lead of leads) {
+    const docRef = fsDoc(firestoreDb, LEADS_COLLECTION, lead.id);
+    batch.set(docRef, { ...lead, createdAt: fsServerTimestamp(), updatedAt: fsServerTimestamp() });
+  }
+  await batch.commit();
+}
 export async function batchUpdateCloudLeads(
   updates: Array<{ id: string; changes: Partial<LeadData> }>
 ): Promise<void> {

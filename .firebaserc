@@ -5,6 +5,9 @@
   "targets": {
     "studio-4949838222-b0ffc": {
       "hosting": {
+        "vitality-erp": [
+          "vitality-erp"
+        ],
         "vitality-prospecc": [
           "vitality-prospecc"
         ],

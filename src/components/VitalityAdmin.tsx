@@ -14,7 +14,8 @@ import {
   clearCloudNCLogs,
   deleteCloudLead,
   saveCloudTabsOrder,
-  batchUpdateCloudLeads
+  batchUpdateCloudLeads,
+  batchCreateCloudLeads
 } from '@/services/cloudCrm';
 import { TickToolModal } from './TickToolModal';
 import { VitalityCalendarView } from './VitalityCalendarView';
@@ -1330,17 +1331,19 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
         const p = await getUserProfile(u.uid, u.email);
         setUserProfile(p);
         // RBAC Estricto:
-        // Superadmin (mipropiadinastia@gmail.com) ve ALL y puede filtrar
-        // Asesores (jangelborges -> Jose Angel, r.olaizola -> Ricfel) solo ven sus leads
-        if (p?.role === 'superadmin') {
+        // UltraAdmin (mipropiadinastia) ve ALL y gestiona todo
+        // Superadmins: jangelborges -> Jose Angel, r.olaizola -> Ricfel
+        if (p?.role === 'ultra_admin') {
           setSelectedRep('ALL');
+        } else if (p?.assignedRepName === 'Ricfel') {
+          setSelectedRep('Ricfel');
+          setActiveTab('Mod Avcn (R)');
+        } else if (p?.assignedRepName === 'Jose Angel') {
+          setSelectedRep('Jose Angel');
+          setActiveTab('Prospecc');
         } else if (p?.assignedRepName) {
           setSelectedRep(p.assignedRepName as AdminRep);
-          if (p.assignedRepName === 'Ricfel') {
-            setActiveTab('Mod Avcn (R)');
-          } else {
-            setActiveTab('Prospecc');
-          }
+          setActiveTab('Prospecc');
         }
         // Intentar sincronizar contactos si hay token disponible
         const token = getStoredAccessToken();
@@ -1523,8 +1526,9 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   const [showRepModal, setShowRepModal] = useState<boolean>(false);
   const [isPortalOpen, setIsPortalOpen] = useState<boolean>(false);
 
-  // Rol estricto para acceso al Portal: solo Ricfel, Jose Angel y SuperAdmin
+  // Rol estricto para acceso al Portal: solo Ricfel, Jose Angel y SuperAdmin (o UltraAdmin)
   const isPortalAuthorized = Boolean(
+    userProfile?.role === 'ultra_admin' ||
     userProfile?.role === 'superadmin' ||
     selectedRep === 'Ricfel' ||
     selectedRep === 'Jose Angel' ||
@@ -1963,6 +1967,9 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   // Pestañas visibles según categoría y encargado activo:
   // En Reclutas: estrictamente las 3 pestañas solicitadas ['Esan', 'Mod Aviacion', 'RP']
   const visibleTabs = React.useMemo(() => {
+    if (!currentUser || !userProfile) {
+      return [];
+    }
     if (leadCategoryView === 'reclutas') {
       return DEFAULT_REC_TABS;
     }
@@ -1975,10 +1982,13 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
       }
       return true; // 'ALL'
     });
-  }, [sheetTabs, selectedRep, leadCategoryView]);
+  }, [sheetTabs, selectedRep, leadCategoryView, currentUser, userProfile]);
 
   // Leads filtrados por Encargado seleccionado (estricto por pestañas visibles asignadas)
   const repLeads = React.useMemo(() => {
+    if (!currentUser || !userProfile) {
+      return [];
+    }
     return categoryLeads.filter(lead => {
       const tab = getLeadSheetTab(lead);
       if (selectedRep === 'Ricfel') {
@@ -1989,7 +1999,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
       }
       return true;
     });
-  }, [categoryLeads, selectedRep, visibleTabs]);
+  }, [categoryLeads, selectedRep, visibleTabs, currentUser, userProfile]);
 
   // Valores únicos para filtros de columna (calculados sobre los leads de la pestaña activa o todos)
   const uniqueDistritos = React.useMemo(() => {
@@ -4004,7 +4014,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
       )}
     </div>
 
-    {/* Modal de Portal Administrativo (Roles, Traspasos & Reordenamiento) */}
+    {/* Modal de Portal Administrativo (Roles & Traspasos) */}
     <PortalModal
       isOpen={isPortalOpen}
       onClose={() => setIsPortalOpen(false)}
@@ -4015,9 +4025,9 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
       selectedRep={selectedRep}
       onSelectRep={handleSelectRep}
       onSelectTab={(tab) => setActiveTab(tab)}
-      onUpdateTabs={async (newTabs) => {
-        await saveCloudTabsOrder(newTabs);
-        setSheetTabs(newTabs);
+      onBatchCreateLeads={async (newLeads) => {
+        await batchCreateCloudLeads(newLeads);
+        newLeads.forEach(nl => onUpdateLead(nl));
       }}
       onBatchUpdateLeads={async (updates) => {
         await batchUpdateCloudLeads(updates);
