@@ -119,11 +119,18 @@ export const FormDemoView: React.FC = () => {
       alert('Por favor ingresa el nombre del Cliente o Socio.');
       return;
     }
+    if (!fecha || !hora) {
+      alert('Por favor selecciona la fecha y hora de la cita.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       // 1. Guardar en Firestore colección 'citas_agenda'
-      const startDateTime = new Date(`${fecha}T${hora}`);
+      let startDateTime = new Date(`${fecha}T${hora}`);
+      if (isNaN(startDateTime.getTime())) {
+        startDateTime = new Date();
+      }
       const endDateTime = new Date(startDateTime.getTime() + duracionMinutos * 60 * 1000);
 
       await addDoc(collection(db, 'citas_agenda'), {
@@ -274,21 +281,31 @@ export const FormDemoView: React.FC = () => {
                 <label className="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1">
                   Asesor / Ejecutivo
                 </label>
-                <select
-                  value={asesor}
-                  onChange={(e) => setAsesor(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
-                >
-                  <option value="Ricfel">Ricfel (SuperAdmin)</option>
-                  <option value="Jangel">Jangel (SuperAdmin)</option>
-                  {crmUsers
-                    .filter(u => u.displayName && !['Ricfel', 'Jangel', 'Ricfel Olaizola', 'José Angel Borges', 'Jose Angel'].includes(u.displayName))
-                    .map(u => (
-                      <option key={u.uid} value={u.displayName}>
-                        {u.displayName}
-                      </option>
-                    ))}
-                </select>
+                {(userProfile?.role === 'superadmin' || userProfile?.role === 'ultra_admin') ? (
+                  <select
+                    value={asesor}
+                    onChange={(e) => setAsesor(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
+                  >
+                    <option value="Ricfel">Ricfel</option>
+                    <option value="Jangel">Jangel</option>
+                    {crmUsers
+                      .filter(u => u.displayName && !['Ricfel', 'Jangel', 'Ricfel Olaizola', 'José Angel Borges', 'Jose Angel'].includes(u.displayName))
+                      .map(u => (
+                        <option key={u.uid} value={u.displayName}>
+                          {u.displayName}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={asesor}
+                    onChange={(e) => setAsesor(e.target.value)}
+                    placeholder="Tu nombre de Asesor"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
+                  />
+                )}
               </div>
 
               <div>

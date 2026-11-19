@@ -192,7 +192,7 @@ export function LeadWizard() {
       )}
 
       {/* Botón flotante circular con logo Vitality que aparece tras 1 segundo para volver al Hub */}
-      <FloatingHubHomeButton position="bottom-left" />
+      <FloatingHubHomeButton position="bottom-right" />
     </div>
   )
 }

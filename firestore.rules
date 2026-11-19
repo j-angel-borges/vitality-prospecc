@@ -25,6 +25,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Reglas para Citas y Agenda comercial (FormDemo)
+    match /citas_agenda/{citaId} {
+      allow read, write: if true;
+    }
+
     // Colección de metadatos para roles
     match /roles_admin/{uid} {
       allow read: if true;

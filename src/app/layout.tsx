@@ -6,7 +6,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PwaRegister } from '@/components/PwaRegister';
 
 export const viewport: Viewport = {
-  themeColor: '#002244',
+  themeColor: '#FFFFFF',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,

@@ -10,14 +10,14 @@ interface FloatingHubHomeButtonProps {
 }
 
 export const FloatingHubHomeButton: React.FC<FloatingHubHomeButtonProps> = ({
-  position = 'bottom-left',
+  position = 'bottom-right',
   className = '',
   style = {}
 }) => {
   const [isVisible, setIsVisible] = useState<boolean>(false);
 
   useEffect(() => {
-    // Aparece suavemente después de 1 segundo de tener la sección abierta
+    // Aparece suavemente después de exactamente 1 segundo de tener la sección abierta
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, 1000);
@@ -26,54 +26,95 @@ export const FloatingHubHomeButton: React.FC<FloatingHubHomeButtonProps> = ({
 
   const getPositionStyles = (): React.CSSProperties => {
     switch (position) {
-      case 'bottom-left':
-        return {
-          left: 'max(0.75rem, env(safe-area-inset-left))',
-          bottom: 'max(0.75rem, env(safe-area-inset-bottom))',
-        };
       case 'bottom-right':
         return {
-          right: 'max(0.75rem, env(safe-area-inset-right))',
-          bottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+          right: 'max(14px, env(safe-area-inset-right))',
+          // Separación segura sobre la barra inferior del CRM spread
+          bottom: 'max(56px, calc(env(safe-area-inset-bottom) + 50px))',
+        };
+      case 'bottom-left':
+        return {
+          left: 'max(14px, env(safe-area-inset-left))',
+          bottom: 'max(56px, calc(env(safe-area-inset-bottom) + 50px))',
         };
       case 'top-left':
         return {
-          left: 'max(0.75rem, env(safe-area-inset-left))',
-          top: 'max(0.75rem, env(safe-area-inset-top))',
+          left: 'max(14px, env(safe-area-inset-left))',
+          top: 'max(14px, env(safe-area-inset-top))',
         };
       case 'top-right':
         return {
-          right: 'max(0.75rem, env(safe-area-inset-right))',
-          top: 'max(0.75rem, env(safe-area-inset-top))',
+          right: 'max(14px, env(safe-area-inset-right))',
+          top: 'max(14px, env(safe-area-inset-top))',
         };
       default:
-        return {};
+        return {
+          right: 'max(14px, env(safe-area-inset-right))',
+          bottom: 'max(56px, calc(env(safe-area-inset-bottom) + 50px))',
+        };
     }
   };
 
   return (
-    <Link
-      href="/"
-      style={{
-        position: 'fixed',
-        zIndex: 9999,
-        ...getPositionStyles(),
-        opacity: isVisible ? 1 : 0,
-        transform: isVisible ? 'scale(1)' : 'scale(0.7)',
-        pointerEvents: isVisible ? 'auto' : 'none',
-        transition: 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-        touchAction: 'manipulation',
-        ...style
-      }}
-      className={`group w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white text-slate-800 shadow-lg hover:shadow-xl border border-slate-200/90 backdrop-blur-md flex items-center justify-center active:scale-90 transition-all ${className}`}
-      title="Volver a Inicio (Hub Vitality ERP)"
-      aria-label="Volver a Inicio (Hub Vitality ERP)"
-    >
-      <img
-        src="/vitality_symbol.png"
-        alt="Vitality"
-        className="w-5 h-5 sm:w-5.5 sm:h-5.5 object-contain transition-transform group-hover:scale-110 drop-shadow-xs"
-      />
-    </Link>
+    <>
+      <style jsx global>{`
+        @keyframes popExpandEntrance {
+          0% {
+            opacity: 0;
+            transform: scale(0.15);
+          }
+          65% {
+            opacity: 1;
+            transform: scale(1.18);
+          }
+          85% {
+            transform: scale(0.95);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        @keyframes subtleFloatMotion {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-4px);
+          }
+        }
+        .vitality-floating-hub-container {
+          animation: popExpandEntrance 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .vitality-floating-hub-inner {
+          animation: subtleFloatMotion 3s ease-in-out infinite;
+        }
+      `}</style>
+
+      {isVisible && (
+        <div
+          style={{
+            position: 'fixed',
+            zIndex: 9999,
+            ...getPositionStyles(),
+            ...style
+          }}
+          className="vitality-floating-hub-container"
+        >
+          <Link
+            href="/"
+            className={`vitality-floating-hub-inner group w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-slate-800 shadow-[0_6px_20px_rgba(0,34,68,0.22)] hover:shadow-[0_8px_25px_rgba(0,34,68,0.3)] border border-slate-200/90 backdrop-blur-md flex items-center justify-center active:scale-90 transition-all ${className}`}
+            title="Volver al Hub Principal (Vitality ERP)"
+            aria-label="Volver al Hub Principal (Vitality ERP)"
+          >
+            <img
+              src="/vitality_symbol.png"
+              alt="Vitality"
+              className="w-5.5 h-5.5 sm:w-6 sm:h-6 object-contain transition-transform group-hover:scale-110 drop-shadow-xs"
+            />
+          </Link>
+        </div>
+      )}
+    </>
   );
 };

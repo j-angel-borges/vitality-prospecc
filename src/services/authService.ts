@@ -231,7 +231,19 @@ export async function getUserProfile(uid: string, email?: string | null): Promis
     const userDocRef = doc(db, 'crm_users', uid);
     const snap = await getDoc(userDocRef);
     if (snap.exists()) {
-      return snap.data() as CrmUserProfile;
+      const profile = snap.data() as CrmUserProfile;
+      const emailLower = (profile.email || email || '').toLowerCase();
+      if (emailLower === 'mipropiadinastia@gmail.com') {
+        profile.role = 'ultra_admin';
+        profile.assignedRepName = 'ALL';
+      } else if (emailLower.includes('jangelborges')) {
+        profile.role = 'superadmin';
+        profile.assignedRepName = 'Jangel';
+      } else if (emailLower.includes('r.olaizola') || emailLower.includes('ricfel')) {
+        profile.role = 'superadmin';
+        profile.assignedRepName = 'Ricfel';
+      }
+      return profile;
     }
 
     const emailLower = (email || '').toLowerCase();

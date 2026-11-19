@@ -1343,6 +1343,35 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   const [expandAllTexts, setExpandAllTexts] = useState<boolean>(false);
   const [isColMenuOpen, setIsColMenuOpen] = useState<boolean>(false);
 
+  // ── Drag & Scroll para barra de pestañas inferior ─────────────────────────
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const isDraggingTabsRef = useRef<boolean>(false);
+  const startTabsXRef = useRef<number>(0);
+  const startScrollLeftRef = useRef<number>(0);
+  const hasDraggedRef = useRef<boolean>(false);
+
+  const handleTabsMouseDown = (e: React.MouseEvent) => {
+    if (!tabsScrollRef.current) return;
+    isDraggingTabsRef.current = true;
+    hasDraggedRef.current = false;
+    startTabsXRef.current = e.pageX - tabsScrollRef.current.offsetLeft;
+    startScrollLeftRef.current = tabsScrollRef.current.scrollLeft;
+  };
+
+  const handleTabsMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingTabsRef.current || !tabsScrollRef.current) return;
+    const x = e.pageX - tabsScrollRef.current.offsetLeft;
+    const walk = (x - startTabsXRef.current) * 1.5;
+    if (Math.abs(walk) > 4) {
+      hasDraggedRef.current = true;
+    }
+    tabsScrollRef.current.scrollLeft = startScrollLeftRef.current - walk;
+  };
+
+  const handleTabsMouseUp = () => {
+    isDraggingTabsRef.current = false;
+  };
+
   // ── Auth & Google Contacts Sync States (Global Auth Context) ──────────────
   const {
     currentUser,
@@ -2041,8 +2070,9 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     if (leadCategoryView === 'reclutas') {
       return DEFAULT_REC_TABS;
     }
-    // Si no es superadmin, restringir a pestañas asignadas o propias (nuevos usuarios empiezan limpios)
-    if (userProfile.role !== 'superadmin') {
+    // Si no es superadmin ni ultra_admin, restringir a pestañas asignadas o propias (nuevos usuarios empiezan limpios)
+    const isPrivileged = userProfile.role === 'superadmin' || userProfile.role === 'ultra_admin';
+    if (!isPrivileged) {
       const myTabs = userProfile.assignedTabs && userProfile.assignedTabs.length > 0
         ? userProfile.assignedTabs
         : sheetTabs.filter(tab => tab.toLowerCase().includes(userProfile.displayName?.toLowerCase() || '___'));
@@ -2055,7 +2085,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
       if (selectedRep === 'Jose Angel' || selectedRep === 'Jangel') {
         return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ricfel');
       }
-      return true; // 'ALL'
+      return true; // 'ALL' (UltraAdmin y vista Consolidada)
     });
   }, [sheetTabs, selectedRep, leadCategoryView, currentUser, userProfile]);
 
@@ -2064,7 +2094,8 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     if (!currentUser || !userProfile) {
       return [];
     }
-    if (userProfile.role !== 'superadmin') {
+    const isPrivileged = userProfile.role === 'superadmin' || userProfile.role === 'ultra_admin';
+    if (!isPrivileged) {
       return categoryLeads.filter(lead => {
         const tab = getLeadSheetTab(lead);
         const rep = (lead as any).assignedRep || '';
@@ -2298,7 +2329,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                     border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                   }}
-                  title={`Conectado: ${currentUser.email} (${userProfile?.role === 'superadmin' ? 'SuperAdmin' : 'Asesor'})`}
+                  title={`Conectado: ${currentUser.email}`}
                 >
                   {currentUser.photoURL ? (
                     <img
@@ -2311,18 +2342,8 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                       {(currentUser.displayName || currentUser.email || 'U')[0].toUpperCase()}
                     </div>
                   )}
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isDark ? '#F8FAFC' : '#1E293B' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isDark ? '#F8FAFC' : '#1E293B', paddingRight: '4px' }}>
                     {currentUser.displayName ? currentUser.displayName.split(' ')[0] : 'Usuario'}
-                  </span>
-                  <span style={{
-                    fontSize: '0.62rem',
-                    fontWeight: 800,
-                    padding: '1px 5px',
-                    borderRadius: '8px',
-                    background: userProfile?.role === 'superadmin' ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#EFF6FF') : (isDark ? 'rgba(245, 158, 11, 0.25)' : '#FEF3C7'),
-                    color: userProfile?.role === 'superadmin' ? (isDark ? '#60A5FA' : '#004D99') : (isDark ? '#FBBF24' : '#92400E')
-                  }}>
-                    {userProfile?.role === 'superadmin' ? 'Admin' : 'Asesor'}
                   </span>
                 </div>
 
@@ -2391,16 +2412,16 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                   boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                   transition: 'all 0.2s ease'
                 }}
-                title="Conectar con tu cuenta de Google para verificar contactos agendados"
+                title="Iniciar sesión para acceder al CRM de Vitality"
               >
                 <Icons.Google />
-                <span>{isAuthLoading ? 'Conectando...' : 'Conectar Google'}</span>
+                <span>{isAuthLoading ? 'Conectando...' : 'Iniciar Sesión'}</span>
               </button>
             )}
 
             {/* Filtro de Asesor (Exclusivo SuperAdmin, sin selector obsoleto) */}
-            {/* Selector de Vista de Asesor / Consolidado (Exclusivo SuperAdmin) */}
-            {Boolean(currentUser && userProfile?.role === 'superadmin') && (
+            {/* Selector de Vista de Asesor / Consolidado (Exclusivo SuperAdmin / UltraAdmin) */}
+            {Boolean(currentUser && (userProfile?.role === 'superadmin' || userProfile?.role === 'ultra_admin')) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: isDark ? '#1E293B' : '#F1F5F9', padding: '2px 4px', borderRadius: '16px', border: isDark ? '1px solid #334155' : '1px solid #CBD5E1' }}>
                 <span style={{ fontSize: '0.68rem', fontWeight: 700, color: isDark ? '#94A3B8' : '#64748B', padding: '0 4px' }}>Vista:</span>
                 <button
@@ -3525,6 +3546,32 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                               <Icons.FileText />
                             </button>
                           )}
+                          {/* Botón de Acciones Masivas / Individual (3 cubos) */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedLeadIds([lead.id]);
+                              setIsBatchModalOpen(true);
+                            }}
+                            style={{
+                              border: 'none',
+                              background: 'transparent',
+                              color: isDark ? '#34D399' : '#059669',
+                              cursor: 'pointer',
+                              padding: '4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Acciones para este prospecto (Cambiar etapa CRM, Mover a pestaña, Nueva pestaña)"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                              <path d="M2 17l10 5 10-5" />
+                              <path d="M2 12l10 5 10-5" />
+                            </svg>
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => handleDelete(lead.id)}
@@ -3968,8 +4015,13 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
           transition: 'background-color 0.25s ease, border-color 0.25s ease'
         }}
       >
-        {/* Pestañas a la izquierda */}
+        {/* Pestañas a la izquierda con Drag & Scroll nativo y táctil */}
         <div 
+          ref={tabsScrollRef}
+          onMouseDown={handleTabsMouseDown}
+          onMouseMove={handleTabsMouseMove}
+          onMouseUp={handleTabsMouseUp}
+          onMouseLeave={handleTabsMouseUp}
           className="touch-scroll-x"
           style={{ 
             display: 'flex', 
@@ -3978,7 +4030,10 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
             overflowX: 'auto', 
             flex: 1, 
             paddingBottom: '0',
-            WebkitOverflowScrolling: 'touch'
+            WebkitOverflowScrolling: 'touch',
+            cursor: 'grab',
+            userSelect: 'none',
+            touchAction: 'pan-x'
           }}
         >
           {visibleTabs.map((tab) => {
@@ -4003,7 +4058,11 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
               >
                 <button
                   type="button"
-                  onClick={() => handleSelectTab(tab)}
+                  onClick={() => {
+                    if (!hasDraggedRef.current) {
+                      handleSelectTab(tab);
+                    }
+                  }}
                   style={{
                     border: 'none',
                     background: 'transparent',

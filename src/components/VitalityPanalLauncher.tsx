@@ -231,11 +231,11 @@ export const VitalityPanalLauncher: React.FC = () => {
                 <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-[11px] sm:text-xs font-bold text-slate-800 leading-tight truncate max-w-[95px] sm:max-w-none">
-                  {userProfile?.displayName || currentUser.displayName || 'Asesor'}
+                <span className="text-[11px] sm:text-xs font-bold text-slate-800 leading-tight truncate max-w-[120px] sm:max-w-none">
+                  {userProfile?.displayName || currentUser.displayName || 'Usuario'}
                 </span>
-                <span className="text-[9px] font-semibold text-blue-700">
-                  {userProfile?.role === 'ultra_admin' ? 'UltraAdmin' : (userProfile?.role === 'superadmin' ? 'SuperAdmin' : 'Asesor')}
+                <span className="text-[9px] font-medium text-slate-500 truncate max-w-[120px] sm:max-w-none">
+                  {currentUser.email}
                 </span>
               </div>
               <button
@@ -253,13 +253,13 @@ export const VitalityPanalLauncher: React.FC = () => {
           ) : (
             <button
               type="button"
-              onClick={() => openLoginModal('Acceso Comercial', '/crm')}
+              onClick={() => openLoginModal('Iniciar Sesión', '/crm')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#002244] hover:bg-[#003366] text-white text-xs font-bold shadow-sm transition-all active:scale-95"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
               </svg>
-              <span>Acceso Comercial</span>
+              <span>Iniciar Sesión</span>
             </button>
           )}
         </div>
@@ -302,12 +302,12 @@ export const VitalityPanalLauncher: React.FC = () => {
               className="group flex flex-col items-center focus:outline-none w-full"
               style={{ touchAction: 'manipulation' }}
             >
-              {/* App Tile (Balanced Squircle / Smartwatch App Icon) */}
+              {/* App Tile (Circular Bubble / Apple Watch App Style) */}
               <div
-                className="w-20 h-20 xs:w-22 xs:h-22 sm:w-24 sm:h-24 md:w-26 md:h-26 rounded-[22px] sm:rounded-[26px] flex flex-col items-center justify-center p-2 transition-all duration-200 transform group-hover:scale-105 active:scale-95 border border-white/60 group-hover:border-white shadow-md group-hover:shadow-lg"
+                className="w-20 h-20 xs:w-22 xs:h-22 sm:w-24 sm:h-24 md:w-26 md:h-26 rounded-full flex flex-col items-center justify-center p-2 transition-all duration-300 transform group-hover:scale-110 active:scale-95 border-2 border-white/80 group-hover:border-white shadow-lg group-hover:shadow-xl relative overflow-hidden"
                 style={{
                   background: app.bgGradient,
-                  boxShadow: `0 8px 18px ${app.shadowColor}`
+                  boxShadow: `0 8px 20px ${app.shadowColor}, inset 0 2px 4px rgba(255,255,255,0.4)`
                 }}
               >
                 <div className="transition-transform duration-200 group-hover:-translate-y-0.5">
