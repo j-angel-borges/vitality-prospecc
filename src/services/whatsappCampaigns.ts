@@ -452,7 +452,7 @@ export function subscribeToCampaigns(onUpdate: (campaigns: WhatsAppCampaign[]) =
         try {
           const backup = JSON.parse(localStorage.getItem(LS_CAMPAIGNS_BACKUP) || '[]');
           if (backup.length > 0) {
-            backup.forEach((c) => {
+            backup.forEach((c: any) => {
               setDoc(doc(db, CAMPAIGNS_COLLECTION, c.id), c, { merge: true }).catch(() => {});
             });
             onUpdate(backup);
@@ -495,7 +495,7 @@ export function subscribeToOutbox(onUpdate: (items: WhatsAppOutboxItem[]) => voi
         try {
           const backup = JSON.parse(localStorage.getItem(LS_OUTBOX_BACKUP) || '[]');
           if (backup.length > 0) {
-            backup.forEach((item) => {
+            backup.forEach((item: any) => {
               setDoc(doc(db, OUTBOX_COLLECTION, item.id), item, { merge: true }).catch(() => {});
             });
             onUpdate(backup);

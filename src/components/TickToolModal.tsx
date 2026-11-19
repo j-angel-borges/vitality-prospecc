@@ -545,8 +545,14 @@ export const TickToolModal: React.FC<TickToolModalProps> = ({
       celular: finalPhone,
       sheetTab: finalTab,
       distrito: finalDistrito,
-      rawEstado: 'Nuevo / Agregado Manual',
-      timestamp: Date.now()
+      observaciones: 'Nuevo / Agregado Manual',
+      timestamp: new Date().toISOString(),
+      nivelPreocupacion: '',
+      conocimientoDano: '',
+      edadHijos: '',
+      preguntaCondicional: '',
+      respuestaCondicional: '',
+      interesSolucion: ''
     };
 
     // 1. Extra leads state & localStorage

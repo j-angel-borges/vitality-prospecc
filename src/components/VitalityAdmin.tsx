@@ -16,13 +16,15 @@ import {
 } from '@/services/cloudCrm';
 import { TickToolModal } from './TickToolModal';
 import { VitalityCalendarView } from './VitalityCalendarView';
+import { ClientFichaModal } from './ClientFichaModal';
 import { InstallAppButton } from './InstallAppButton';
 import {
   CrmUserProfile,
   loginWithGoogle,
   logoutUser,
   getUserProfile,
-  getStoredAccessToken
+  getStoredAccessToken,
+  setStoredAccessToken
 } from '@/services/authService';
 import {
   GoogleContact,
@@ -143,6 +145,15 @@ const Icons = {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
       <line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+    </svg>
+  ),
+  FileText: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
     </svg>
   ),
   Calendar: () => (
@@ -698,6 +709,7 @@ interface CallHistoryModalProps {
   onAddNewLog: (code: string, obs: string) => Promise<void>;
   onDeleteLog: (logId: string) => Promise<void>;
   onClearNC: () => Promise<void>;
+  isDark?: boolean;
 }
 
 const CallHistoryModal: React.FC<CallHistoryModalProps> = ({
@@ -1553,6 +1565,9 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     mode: 'recent' | 'all';
   } | null>(null);
 
+  // Modal de Ficha de Cliente State
+  const [activeClientFicha, setActiveClientFicha] = useState<LeadData | null>(null);
+
   // ── 1. Collapsed columns state with LocalStorage Persistence ────────────────
   const [collapsedCols, setCollapsedCols] = useState<Record<ColumnKey, boolean>>(() => {
     try {
@@ -1572,6 +1587,16 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
       return {};
     }
   });
+
+  const isFichaEligible = useCallback((lead: LeadData) => {
+    const estado = getLeadField(lead, 'estadoCrm');
+    return (
+      estado === 'ganado' ||
+      getLeadSheetTab(lead) === 'Clientes' ||
+      Boolean(lead.clienteFicha) ||
+      Boolean(lead.numeroCliente)
+    );
+  }, [localEdits]);
 
   // Broadcast resolved leads & activeTab to parent QZ-Hub Tick Tool
   useEffect(() => {
@@ -1906,10 +1931,10 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     }
     return sheetTabs.filter(tab => {
       if (selectedRep === 'Ricfel') {
-        return tab === 'Mod Avcn (R)' || tab.toLowerCase().includes('ricfel');
+        return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ricfel');
       }
       if (selectedRep === 'Jose Angel') {
-        return tab !== 'Mod Avcn (R)' && !tab.toLowerCase().includes('ricfel');
+        return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ricfel');
       }
       return true; // 'ALL'
     });
@@ -1919,10 +1944,10 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   const repLeads = React.useMemo(() => {
     return categoryLeads.filter(lead => {
       if (selectedRep === 'Ricfel') {
-        return lead.salesRep === 'Ricfel' || getLeadSheetTab(lead) === 'Mod Avcn (R)';
+        return lead.salesRep === 'Ricfel' || getLeadSheetTab(lead) === 'Mod Avcn (R)' || getLeadSheetTab(lead) === 'Clientes';
       }
       if (selectedRep === 'Jose Angel') {
-        return lead.salesRep !== 'Ricfel' && getLeadSheetTab(lead) !== 'Mod Avcn (R)';
+        return lead.salesRep !== 'Ricfel' && getLeadSheetTab(lead) !== 'Mod Avcn (R)' && getLeadSheetTab(lead) !== 'Clientes';
       }
       return true;
     });
@@ -2013,19 +2038,23 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     if (!term) return true;
 
     const nombre = (getLeadField(lead, 'nombreMadre') || '').toLowerCase();
+    const apellido = (getLeadField(lead, 'apellido') || '').toLowerCase();
     const celular = (getLeadField(lead, 'celular') || '');
     const distrito = (getLeadField(lead, 'distrito') || '').toLowerCase();
     const obs = (getLeadField(lead, 'observaciones') || '').toLowerCase();
     const gest = (getLeadField(lead, 'gestCall') || '').toLowerCase();
     const obsCall = (getLeadField(lead, 'obserCalls') || '').toLowerCase();
+    const numCliente = (getLeadField(lead, 'numeroCliente') || '').toLowerCase();
 
     return (
       nombre.includes(term) ||
+      apellido.includes(term) ||
       celular.includes(term) ||
       distrito.includes(term) ||
       obs.includes(term) ||
       gest.includes(term) ||
-      obsCall.includes(term)
+      obsCall.includes(term) ||
+      numCliente.includes(term)
     );
   });
 
@@ -3090,9 +3119,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                                     }
                                   }));
                                   try {
-                                    await updateDoc(doc(db, LEADS_COLLECTION, lid), {
-                                      callHistory: hist
-                                    });
+                                    await updateCloudLeadField(lid, 'callHistory', hist);
                                   } catch (e) {}
                                 }
                               }
@@ -3291,20 +3318,44 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
 
                       {/* 15. Acciones */}
                       <td>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(lead.id)}
-                          style={{
-                            border: 'none',
-                            background: 'transparent',
-                            color: '#EF4444',
-                            cursor: 'pointer',
-                            padding: '4px'
-                          }}
-                          title="Eliminar Lead"
-                        >
-                          <Icons.Trash2 />
-                        </button>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {isFichaEligible(lead) && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveClientFicha(lead)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                color: '#2563EB',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Ficha del cliente"
+                            >
+                              <Icons.FileText />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(lead.id)}
+                            style={{
+                              border: 'none',
+                              background: 'transparent',
+                              color: '#EF4444',
+                              cursor: 'pointer',
+                              padding: '4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Eliminar Lead"
+                          >
+                            <Icons.Trash2 />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -3413,28 +3464,53 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                           )}
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #E2E8F0' }}>
-                            {cleanPhone && (
-                              <a
-                                href={waUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  background: '#10B981',
-                                  color: 'white',
-                                  borderRadius: '6px',
-                                  padding: '4px 8px',
-                                  fontSize: '0.72rem',
-                                  fontWeight: 600,
-                                  textDecoration: 'none',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}
-                              >
-                                <Icons.MessageCircle />
-                                <span>WhatsApp</span>
-                              </a>
-                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {cleanPhone && (
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{
+                                    background: '#10B981',
+                                    color: 'white',
+                                    borderRadius: '6px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600,
+                                    textDecoration: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                >
+                                  <Icons.MessageCircle />
+                                  <span>WhatsApp</span>
+                                </a>
+                              )}
+                              {isFichaEligible(lead) && (
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveClientFicha(lead)}
+                                  style={{
+                                    background: '#2563EB',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Ficha del cliente"
+                                >
+                                  <Icons.FileText />
+                                  <span>Ficha</span>
+                                </button>
+                              )}
+                            </div>
 
                             <select
                               value={getLeadField(lead, 'estadoCrm') || 'nuevo'}
@@ -3753,6 +3829,26 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
           }}
           onClearNC={async () => {
             await handleClearNC(activeHistoryModal.lead.id);
+          }}
+        />
+      )}
+
+      {/* ── Modal Emergente de Ficha de Cliente ────────────────────────────── */}
+      {activeClientFicha && (
+        <ClientFichaModal
+          lead={activeClientFicha}
+          isDark={isDark}
+          onClose={() => setActiveClientFicha(null)}
+          onSave={async (updatedFields) => {
+            try {
+              const leadId = activeClientFicha.id;
+              for (const [key, val] of Object.entries(updatedFields)) {
+                await updateCloudLeadField(leadId, key as keyof LeadData, val);
+              }
+              setActiveClientFicha((prev) => (prev ? { ...prev, ...updatedFields } : null));
+            } catch (err) {
+              console.error('Error updating ficha:', err);
+            }
           }}
         />
       )}

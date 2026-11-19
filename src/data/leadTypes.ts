@@ -4,6 +4,20 @@ export interface CallLogEntry {
   label?: string;
   datetime: string;
   note?: string;
+  observation?: string;
+}
+
+export interface ClientFichaData {
+  numeroCliente?: string;
+  nombre?: string;
+  apellido?: string;
+  telefonoMovil?: string;
+  emprendedores?: string;
+  provincia?: string;
+  distrito?: string;
+  direccion?: string;
+  informacionCuenta?: string;
+  ordenes?: string;
 }
 
 export interface LeadData {
@@ -27,10 +41,21 @@ export interface LeadData {
   ticketUrl?: string;
   salesRep?: string;
   tipoLead?: 'cliente' | 'rec' | string;
+
+  // Datos extendidos de Ficha de Cliente (Venta Cerrada / Hy Cite)
+  numeroCliente?: string;
+  apellido?: string;
+  provincia?: string;
+  direccion?: string;
+  informacionCuenta?: string;
+  ordenes?: string;
+  emprendedores?: string;
+  clienteFicha?: ClientFichaData;
 }
 
 export const DEFAULT_SHEET_TABS = [
   'Prospecc',
+  'Clientes',
   'Mod Aviacion (JA)',
   'Mod FS Import',
   'REF Eliana Aspillaga',

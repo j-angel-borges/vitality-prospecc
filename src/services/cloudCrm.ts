@@ -1,16 +1,4 @@
 import {
-  db,
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  deleteDoc,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  updateDoc
-} from '@/firebase'; // or from firebase/firestore with db from '@/firebase/firebaseClient'
-import {
   LeadData,
   CallLogEntry,
   DEFAULT_SHEET_TABS,
@@ -132,7 +120,15 @@ export function subscribeToCloudLeads(callback: (leads: LeadData[]) => void): ()
           sheetTab: data.sheetTab || 'Prospecc',
           estadoCrm: data.estadoCrm || 'nuevo',
           salesRep: data.salesRep || 'Jose Angel',
-          tipoLead: data.tipoLead || 'cliente'
+          tipoLead: data.tipoLead || 'cliente',
+          numeroCliente: data.numeroCliente || '',
+          apellido: data.apellido || '',
+          provincia: data.provincia || '',
+          direccion: data.direccion || '',
+          informacionCuenta: data.informacionCuenta || '',
+          ordenes: data.ordenes || '',
+          emprendedores: data.emprendedores || '',
+          clienteFicha: data.clienteFicha || undefined
         });
       });
       callback(cloudList);
