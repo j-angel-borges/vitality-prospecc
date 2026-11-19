@@ -8,6 +8,7 @@ import { DiscoverySlide } from "./slides/DiscoverySlide"
 import { FormSlide } from "./slides/FormSlide"
 import { ActionSlide } from "./slides/ActionSlide"
 import { SuccessSlide } from "./slides/SuccessSlide"
+import { FloatingHubHomeButton } from "./FloatingHubHomeButton"
 import { LeadData } from "@/app/actions/leads"
 import { useAuth, initiateAnonymousSignIn } from "@/firebase"
 
@@ -189,6 +190,9 @@ export function LeadWizard() {
       {currentStep === "success" && (
         <SuccessSlide onReset={resetWizard} />
       )}
+
+      {/* Botón flotante circular con logo Vitality que aparece tras 1 segundo para volver al Hub */}
+      <FloatingHubHomeButton position="bottom-left" />
     </div>
   )
 }

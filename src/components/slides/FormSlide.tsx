@@ -153,7 +153,7 @@ export function FormSlide({ data, onUpdate, onNext }: FormSlideProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Jose Angel" className="text-sm p-2 sm:p-2.5">Jose Angel</SelectItem>
+                          <SelectItem value="Jangel" className="text-sm p-2 sm:p-2.5">Jangel</SelectItem>
                           <SelectItem value="Ricfel" className="text-sm p-2 sm:p-2.5">Ricfel</SelectItem>
                           <SelectItem value="Faviana" className="text-sm p-2 sm:p-2.5">Faviana</SelectItem>
                           <SelectItem value="Matías" className="text-sm p-2 sm:p-2.5">Matías</SelectItem>

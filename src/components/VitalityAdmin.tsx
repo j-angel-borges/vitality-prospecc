@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LeadData, CallLogEntry, DEFAULT_SHEET_TABS, DEFAULT_REC_TABS, LS_ACTIVE_SHEET_TAB, LS_ACTIVE_ADMIN_REP, LS_LEAD_CATEGORY_VIEW } from '@/data/leadTypes';
-export type AdminRep = 'ALL' | 'Jose Angel' | 'Ricfel';
+export type AdminRep = 'ALL' | 'Jangel' | 'Ricfel' | 'Jose Angel';
 const getSavedSheetTabs = (): string[] => DEFAULT_SHEET_TABS;
 import { db } from '@/firebase/firebaseClient';
 import {
@@ -23,6 +23,10 @@ import { ClientFichaModal } from './ClientFichaModal';
 import { InstallAppButton } from './InstallAppButton';
 import { PortalModal } from './PortalModal';
 import { LoginGatekeeperModal } from './LoginGatekeeperModal';
+import { BatchLeadActionsModal } from './BatchLeadActionsModal';
+import { ImportContactsModal } from './ImportContactsModal';
+import { FloatingHubHomeButton } from './FloatingHubHomeButton';
+
 import {
   CrmUserProfile,
   loginWithGoogle,
@@ -51,8 +55,32 @@ interface Props {
 }
 
 // ─── LocalStorage Keys ────────────────────────────────────────────────────────
+const LS_COLUMNS_CONFIG = 'vitality_table_columns_config_v3';
 const LS_COLLAPSED_COLS = 'vitality_admin_collapsed_cols_v2';
 const LS_LOCAL_EDITS = 'vitality_admin_local_edits_v2';
+
+export const DEFAULT_COLUMN_KEYS: ColumnKey[] = [
+  'nombreMadre',
+  'celular',
+  'gestCall',
+  'obserCalls',
+  'distrito',
+  'observaciones',
+  'estadoCrm',
+  'timestamp',
+  'edadHijos',
+  'nivelPreocupacion',
+  'conocimientoDano',
+  'preguntaCondicional',
+  'respuestaCondicional',
+  'interesSolucion',
+  'acciones'
+];
+
+export interface ColumnConfig {
+  order: ColumnKey[];
+  visible: Record<ColumnKey, boolean>;
+}
 
 export type ColumnKey =
   | 'nombreMadre'
@@ -1606,15 +1634,42 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   // Modal de Ficha de Cliente State
   const [activeClientFicha, setActiveClientFicha] = useState<LeadData | null>(null);
 
-  // ── 1. Collapsed columns state with LocalStorage Persistence ────────────────
-  const [collapsedCols, setCollapsedCols] = useState<Record<ColumnKey, boolean>>(() => {
+  // ── 1. Column Config & Visibility State with LocalStorage Persistence ───────
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig>(() => {
     try {
-      const saved = localStorage.getItem(LS_COLLAPSED_COLS);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
+      const saved = localStorage.getItem(LS_COLUMNS_CONFIG);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const validOrder: ColumnKey[] = Array.isArray(parsed.order)
+          ? parsed.order.filter((k: any) => DEFAULT_COLUMN_KEYS.includes(k))
+          : [];
+        DEFAULT_COLUMN_KEYS.forEach(k => {
+          if (!validOrder.includes(k)) validOrder.push(k);
+        });
+        const validVisible: Record<ColumnKey, boolean> = {} as any;
+        DEFAULT_COLUMN_KEYS.forEach(k => {
+          validVisible[k] = parsed.visible && typeof parsed.visible[k] === 'boolean'
+            ? parsed.visible[k]
+            : true;
+        });
+        return { order: validOrder, visible: validVisible };
+      }
+    } catch (e) {}
+    const defaultVisible: Record<ColumnKey, boolean> = {} as any;
+    DEFAULT_COLUMN_KEYS.forEach(k => { defaultVisible[k] = true; });
+    return { order: [...DEFAULT_COLUMN_KEYS], visible: defaultVisible };
   });
+
+  const [saveColumnFeedback, setSaveColumnFeedback] = useState(false);
+  const [draggedColIdx, setDraggedColIdx] = useState<number | null>(null);
+
+  // Modales de Acciones Masivas y Contactos
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Kanban Drag & Drop State
+  const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
   // ── 2. Local Text Edits & Call Logs Cache with LocalStorage Persistence ──────
   const [localEdits, setLocalEdits] = useState<Record<string, Partial<LeadData>>>(() => {
@@ -1667,14 +1722,14 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     } catch (e) {}
   }, [leads, localEdits, activeTab, sheetTabs]);
 
-  // Save collapsed cols whenever changed
+  // Save column config whenever changed
   useEffect(() => {
     try {
-      localStorage.setItem(LS_COLLAPSED_COLS, JSON.stringify(collapsedCols));
+      localStorage.setItem(LS_COLUMNS_CONFIG, JSON.stringify(columnConfig));
     } catch (e) {
-      console.warn('Error saving collapsed columns to localStorage', e);
+      console.warn('Error saving column config to localStorage', e);
     }
-  }, [collapsedCols]);
+  }, [columnConfig]);
 
   // Save local edits whenever changed
   useEffect(() => {
@@ -1717,34 +1772,54 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     }
   };
 
-  const isColCollapsed = (key: ColumnKey) => !!collapsedCols[key];
+  const isColCollapsed = (key: ColumnKey) => !columnConfig.visible[key];
+  const isColVisible = (key: ColumnKey) => !!columnConfig.visible[key];
 
-  const toggleCol = (key: ColumnKey) => {
-    setCollapsedCols(prev => ({
+  const toggleColumnVisibility = (key: ColumnKey) => {
+    setColumnConfig(prev => ({
       ...prev,
-      [key]: !prev[key]
+      visible: {
+        ...prev.visible,
+        [key]: !prev.visible[key]
+      }
     }));
   };
 
-  const applyPreset = (preset: 'crm' | 'stand' | 'all') => {
-    const next: Record<string, boolean> = {};
-    if (preset === 'crm') {
-      COLUMNS.forEach(col => {
-        const keep = ['nombreMadre', 'celular', 'gestCall', 'obserCalls', 'estadoCrm', 'acciones'].includes(col.key);
-        next[col.key] = !keep;
-      });
-    } else if (preset === 'stand') {
-      COLUMNS.forEach(col => {
-        const keep = ['nombreMadre', 'celular', 'distrito', 'observaciones', 'timestamp', 'acciones'].includes(col.key);
-        next[col.key] = !keep;
-      });
-    } else {
-      COLUMNS.forEach(col => {
-        next[col.key] = false;
-      });
-    }
-    setCollapsedCols(next as Record<ColumnKey, boolean>);
+  const moveColumn = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= columnConfig.order.length) return;
+    const newOrder = [...columnConfig.order];
+    const [removed] = newOrder.splice(index, 1);
+    newOrder.splice(targetIndex, 0, removed);
+    setColumnConfig(prev => ({ ...prev, order: newOrder }));
   };
+
+  const handleColDragStart = (idx: number) => {
+    setDraggedColIdx(idx);
+  };
+
+  const handleColDrop = (targetIdx: number) => {
+    if (draggedColIdx === null || draggedColIdx === targetIdx) return;
+    const newOrder = [...columnConfig.order];
+    const [item] = newOrder.splice(draggedColIdx, 1);
+    newOrder.splice(targetIdx, 0, item);
+    setColumnConfig(prev => ({ ...prev, order: newOrder }));
+    setDraggedColIdx(null);
+  };
+
+  const handleSaveColumnConfig = () => {
+    try {
+      localStorage.setItem(LS_COLUMNS_CONFIG, JSON.stringify(columnConfig));
+      setSaveColumnFeedback(true);
+      setTimeout(() => setSaveColumnFeedback(false), 2000);
+    } catch (e) {
+      console.warn('Error saving column config', e);
+    }
+  };
+
+  const orderedVisibleColumns = React.useMemo(() => {
+    return columnConfig.order.filter(key => columnConfig.visible[key]);
+  }, [columnConfig]);
 
   const getLeadField = (lead: LeadData, field: keyof LeadData): any => {
     const edit = localEdits[lead.id];
@@ -1975,11 +2050,18 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     if (leadCategoryView === 'reclutas') {
       return DEFAULT_REC_TABS;
     }
+    // Si no es superadmin, restringir a pestañas asignadas o propias (nuevos usuarios empiezan limpios)
+    if (userProfile.role !== 'superadmin') {
+      const myTabs = userProfile.assignedTabs && userProfile.assignedTabs.length > 0
+        ? userProfile.assignedTabs
+        : sheetTabs.filter(tab => tab.toLowerCase().includes(userProfile.displayName?.toLowerCase() || '___'));
+      return myTabs;
+    }
     return sheetTabs.filter(tab => {
       if (selectedRep === 'Ricfel') {
         return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ricfel');
       }
-      if (selectedRep === 'Jose Angel') {
+      if (selectedRep === 'Jose Angel' || selectedRep === 'Jangel') {
         return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ricfel');
       }
       return true; // 'ALL'
@@ -1991,12 +2073,19 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     if (!currentUser || !userProfile) {
       return [];
     }
+    if (userProfile.role !== 'superadmin') {
+      return categoryLeads.filter(lead => {
+        const tab = getLeadSheetTab(lead);
+        const rep = (lead as any).assignedRep || '';
+        return visibleTabs.includes(tab) || rep === userProfile.displayName || rep === userProfile.assignedRepName;
+      });
+    }
     return categoryLeads.filter(lead => {
       const tab = getLeadSheetTab(lead);
       if (selectedRep === 'Ricfel') {
         return visibleTabs.includes(tab);
       }
-      if (selectedRep === 'Jose Angel') {
+      if (selectedRep === 'Jose Angel' || selectedRep === 'Jangel') {
         return visibleTabs.includes(tab);
       }
       return true;
@@ -2158,7 +2247,8 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     { key: 'descartado', label: 'Descartados', count: filteredLeads.filter(l => getLeadField(l, 'estadoCrm') === 'descartado').length, color: '#EF4444' }
   ];
 
-  const collapsedCount = Object.values(collapsedCols).filter(Boolean).length;
+  const hiddenCount = DEFAULT_COLUMN_KEYS.length - orderedVisibleColumns.length;
+  const collapsedCount = hiddenCount;
   const isAuthGateActive = !currentUser || !userProfile;
 
   return (
@@ -2340,19 +2430,19 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedRep('Jose Angel')}
+                  onClick={() => setSelectedRep('Jangel')}
                   style={{
-                    background: selectedRep === 'Jose Angel' ? (isDark ? '#3B82F6' : '#004D99') : 'transparent',
-                    color: selectedRep === 'Jose Angel' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#475569'),
+                    background: (selectedRep === 'Jangel' || selectedRep === 'Jose Angel') ? (isDark ? '#3B82F6' : '#004D99') : 'transparent',
+                    color: (selectedRep === 'Jangel' || selectedRep === 'Jose Angel') ? '#FFFFFF' : (isDark ? '#94A3B8' : '#475569'),
                     border: 'none',
                     borderRadius: '12px',
                     padding: '2px 8px',
                     fontSize: '0.72rem',
-                    fontWeight: selectedRep === 'Jose Angel' ? 700 : 500,
+                    fontWeight: (selectedRep === 'Jangel' || selectedRep === 'Jose Angel') ? 700 : 500,
                     cursor: 'pointer'
                   }}
                 >
-                  José Angel
+                  Jangel
                 </button>
                 <button
                   type="button"
@@ -2663,22 +2753,102 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
           </div>
         )}
 
-        {/* Column Visibility Menu */}
+        {/* ── Botón de Acciones Masivas (3 cubos isométricos) ── */}
+        <button
+          type="button"
+          onClick={() => setIsBatchModalOpen(true)}
+          style={{
+            background: selectedLeadIds.length > 0 
+              ? (isDark ? 'rgba(16, 185, 129, 0.22)' : '#ECFDF5') 
+              : (isDark ? '#1E293B' : '#FFFFFF'),
+            color: selectedLeadIds.length > 0 
+              ? (isDark ? '#34D399' : '#059669') 
+              : (isDark ? '#E2E8F0' : '#475569'),
+            border: isDark 
+              ? `1.5px solid ${selectedLeadIds.length > 0 ? '#059669' : '#334155'}` 
+              : `1.5px solid ${selectedLeadIds.length > 0 ? '#6EE7B7' : '#CBD5E1'}`,
+            borderRadius: '8px',
+            padding: '7px 11px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: selectedLeadIds.length > 0 ? '0 1px 4px rgba(16,185,129,0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+          title="Acciones masivas con leads seleccionados (Etapa CRM, Mover a pestaña, Nueva pestaña)"
+        >
+          {/* 3 Isometric Cubes SVG Icon */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2L19.5 6.33V15L12 19.33L4.5 15V6.33L12 2Z" />
+            <path d="M12 2V10.66M12 10.66L4.5 6.33M12 10.66L19.5 6.33" />
+            <path d="M12 10.66V19.33" />
+            <path d="M4.5 6.33L12 10.66" />
+          </svg>
+          <span>Acciones</span>
+          {selectedLeadIds.length > 0 && (
+            <span
+              style={{
+                background: '#10B981',
+                color: '#FFFFFF',
+                borderRadius: '10px',
+                padding: '0 6px',
+                fontSize: '0.68rem',
+                fontWeight: 800
+              }}
+            >
+              {selectedLeadIds.length}
+            </span>
+          )}
+        </button>
+
+        {/* ── Botón Importar Contactos (Google, Móvil, vCard / iOS) ── */}
+        <button
+          type="button"
+          onClick={() => setIsImportModalOpen(true)}
+          style={{
+            background: isDark ? '#1E293B' : '#FFFFFF',
+            color: isDark ? '#60A5FA' : '#004D99',
+            border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+            borderRadius: '8px',
+            padding: '7px 11px',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease'
+          }}
+          title="Importar contactos desde Google, celular o vCard (iOS / iPhone)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <line x1="20" y1="8" x2="20" y2="14" />
+            <line x1="23" y1="11" x2="17" y2="11" />
+          </svg>
+          <span className="hidden sm:inline">Importar</span>
+        </button>
+
+        {/* ── Menú de Columnas y Reordenamiento Dinámico (Sin Presets, Persistente) ── */}
         {viewMode === 'spreadsheet' && (
           <div style={{ position: 'relative' }}>
             <button
               type="button"
               onClick={() => setIsColMenuOpen(!isColMenuOpen)}
               style={{
-                background: collapsedCount > 0 
+                background: orderedVisibleColumns.length < DEFAULT_COLUMN_KEYS.length 
                   ? (isDark ? 'rgba(59, 130, 246, 0.2)' : '#F0F5FA') 
                   : (isDark ? '#1E293B' : '#FFFFFF'),
-                color: collapsedCount > 0 
+                color: orderedVisibleColumns.length < DEFAULT_COLUMN_KEYS.length 
                   ? (isDark ? '#60A5FA' : '#004D99') 
                   : (isDark ? '#E2E8F0' : '#475569'),
                 border: isDark 
-                  ? `1.5px solid ${collapsedCount > 0 ? '#2563EB' : '#334155'}` 
-                  : `1.5px solid ${collapsedCount > 0 ? '#93C5FD' : '#CBD5E1'}`,
+                  ? `1.5px solid ${orderedVisibleColumns.length < DEFAULT_COLUMN_KEYS.length ? '#2563EB' : '#334155'}` 
+                  : `1.5px solid ${orderedVisibleColumns.length < DEFAULT_COLUMN_KEYS.length ? '#93C5FD' : '#CBD5E1'}`,
                 borderRadius: '8px',
                 padding: '7px 12px',
                 fontSize: '0.82rem',
@@ -2689,14 +2859,14 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                 gap: '6px',
                 transition: 'all 0.2s ease'
               }}
-              title="Ocultar o mostrar columnas de la tabla (como en Excel)"
+              title="Personalizar columnas visibles y reordenar con arrastre"
             >
               <Icons.Columns />
-              <span>Columnas {collapsedCount > 0 ? `(${15 - collapsedCount}/15)` : ''}</span>
+              <span>Columnas ({orderedVisibleColumns.length}/{DEFAULT_COLUMN_KEYS.length})</span>
               <Icons.ChevronDown />
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Dropdown Menu de Gestión de Columnas */}
             {isColMenuOpen && (
               <div
                 style={{
@@ -2704,117 +2874,192 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                   right: 0,
                   top: '110%',
                   background: isDark ? '#1E293B' : 'white',
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   boxShadow: isDark ? '0 15px 35px rgba(0,0,0,0.6)' : '0 10px 30px rgba(0,0,0,0.15)',
-                  border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
-                  padding: '12px',
+                  border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                  padding: '14px',
                   zIndex: 50,
-                  minWidth: '240px',
-                  maxHeight: '400px',
-                  overflowY: 'auto',
+                  width: '310px',
+                  maxHeight: '440px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid #F1F5F9' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: isDark ? '#F8FAFC' : '#1E293B' }}>Columnas Visibles</span>
+                {/* Cabecera */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '6px', borderBottom: isDark ? '1px solid #334155' : '1px solid #F1F5F9' }}>
+                  <div>
+                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isDark ? '#F8FAFC' : '#1E293B' }}>Columnas y Orden</span>
+                    <span style={{ display: 'block', fontSize: '0.68rem', color: isDark ? '#94A3B8' : '#64748B' }}>
+                      {orderedVisibleColumns.length} de {DEFAULT_COLUMN_KEYS.length} visibles (arrastra o usa flechas)
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setIsColMenuOpen(false)}
-                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94A3B8', fontSize: '0.8rem' }}
+                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94A3B8', fontSize: '0.9rem', padding: '2px 6px' }}
                   >
                     ✕
                   </button>
                 </div>
 
-                {/* Presets */}
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => applyPreset('crm')}
-                    style={{ 
-                      flex: 1, 
-                      padding: '4px', 
-                      fontSize: '0.7rem', 
-                      fontWeight: 600, 
-                      background: isDark ? 'rgba(59, 130, 246, 0.2)' : '#F0F5FA', 
-                      color: isDark ? '#60A5FA' : '#004D99', 
-                      border: isDark ? '1px solid #2563EB' : '1px solid #A3C7EB', 
-                      borderRadius: '4px', 
-                      cursor: 'pointer' 
-                    }}
-                  >
-                    Solo CRM
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyPreset('stand')}
-                    style={{ 
-                      flex: 1, 
-                      padding: '4px', 
-                      fontSize: '0.7rem', 
-                      fontWeight: 600, 
-                      background: isDark ? 'rgba(16, 185, 129, 0.2)' : '#F0FDF4', 
-                      color: isDark ? '#34D399' : '#16A34A', 
-                      border: isDark ? '1px solid #059669' : '1px solid #BBF7D0', 
-                      borderRadius: '4px', 
-                      cursor: 'pointer' 
-                    }}
-                  >
-                    Solo Stand
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyPreset('all')}
-                    style={{ 
-                      flex: 1, 
-                      padding: '4px', 
-                      fontSize: '0.7rem', 
-                      fontWeight: 600, 
-                      background: isDark ? '#0B0F19' : '#F8FAFC', 
-                      color: isDark ? '#CBD5E1' : '#475569', 
-                      border: isDark ? '1px solid #334155' : '1px solid #E2E8F0', 
-                      borderRadius: '4px', 
-                      cursor: 'pointer' 
-                    }}
-                  >
-                    Ver Todo
-                  </button>
-                </div>
+                {/* Lista de Columnas reordenable */}
+                <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, maxHeight: '280px', paddingRight: '2px' }}>
+                  {columnConfig.order.map((key, index) => {
+                    const col = COLUMNS.find(c => c.key === key) || { key, label: key, shortLabel: key };
+                    const isVisible = !!columnConfig.visible[key];
+                    const isFirst = index === 0;
+                    const isLast = index === columnConfig.order.length - 1;
 
-                {/* List of individual columns */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {COLUMNS.map(col => {
-                    const isHidden = isColCollapsed(col.key);
                     return (
-                      <label
-                        key={col.key}
+                      <div
+                        key={key}
+                        draggable={true}
+                        onDragStart={() => handleColDragStart(index)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => handleColDrop(index)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '8px',
-                          padding: '4px 6px',
-                          borderRadius: '4px',
-                          fontSize: '0.8rem',
-                          cursor: 'pointer',
-                          background: isHidden 
-                            ? (isDark ? '#0B0F19' : '#F8FAFC') 
-                            : (isDark ? '#1E293B' : 'white'),
-                          color: isHidden 
-                            ? (isDark ? '#64748B' : '#94A3B8') 
-                            : (isDark ? '#F8FAFC' : '#1E293B'),
-                          userSelect: 'none'
+                          justifyContent: 'space-between',
+                          padding: '5px 6px',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          background: isVisible 
+                            ? (isDark ? '#0F172A' : '#F8FAFC') 
+                            : (isDark ? 'rgba(15, 23, 42, 0.4)' : '#F1F5F9'),
+                          border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
+                          opacity: isVisible ? 1 : 0.6,
+                          transition: 'all 0.15s ease'
                         }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={!isHidden}
-                          onChange={() => toggleCol(col.key)}
-                          style={{ cursor: 'pointer', accentColor: '#004D99' }}
-                        />
-                        <span>{col.label}</span>
-                      </label>
+                        {/* Izquierda: Drag handle + Checkbox + Nombre */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                          <span
+                            style={{ cursor: 'grab', color: '#94A3B8', display: 'flex', alignItems: 'center' }}
+                            title="Arrastrar para cambiar orden"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                              <line x1="4" y1="7" x2="20" y2="7" />
+                              <line x1="4" y1="12" x2="20" y2="12" />
+                              <line x1="4" y1="17" x2="20" y2="17" />
+                            </svg>
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={isVisible}
+                            onChange={() => toggleColumnVisibility(key)}
+                            style={{ cursor: 'pointer', accentColor: '#004D99' }}
+                          />
+                          <span style={{
+                            color: isVisible ? (isDark ? '#F8FAFC' : '#1E293B') : (isDark ? '#64748B' : '#94A3B8'),
+                            fontWeight: isVisible ? 600 : 400,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {col.label}
+                          </span>
+                        </div>
+
+                        {/* Derecha: Flechas Arriba / Abajo para ordenar ágilmente */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <button
+                            type="button"
+                            disabled={isFirst}
+                            onClick={() => moveColumn(index, 'up')}
+                            style={{
+                              border: 'none',
+                              background: 'transparent',
+                              cursor: isFirst ? 'default' : 'pointer',
+                              opacity: isFirst ? 0.2 : 0.7,
+                              color: isDark ? '#94A3B8' : '#64748B',
+                              padding: '2px',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                            title="Mover al principio / arriba"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isLast}
+                            onClick={() => moveColumn(index, 'down')}
+                            style={{
+                              border: 'none',
+                              background: 'transparent',
+                              cursor: isLast ? 'default' : 'pointer',
+                              opacity: isLast ? 0.2 : 0.7,
+                              color: isDark ? '#94A3B8' : '#64748B',
+                              padding: '2px',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                            title="Mover al final / abajo"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
+                </div>
+
+                {/* Pie: Botón Guardar Persistente y Restablecer */}
+                <div style={{ display: 'flex', gap: '6px', paddingTop: '8px', borderTop: isDark ? '1px solid #334155' : '1px solid #F1F5F9' }}>
+                  <button
+                    type="button"
+                    onClick={handleSaveColumnConfig}
+                    style={{
+                      flex: 1,
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: saveColumnFeedback ? '#10B981' : '#004D99',
+                      color: 'white',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '5px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {saveColumnFeedback ? (
+                      <>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span>¡Guardado!</span>
+                      </>
+                    ) : (
+                      <span>Guardar configuración</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const defVisible: Record<ColumnKey, boolean> = {} as any;
+                      DEFAULT_COLUMN_KEYS.forEach(k => { defVisible[k] = true; });
+                      setColumnConfig({ order: [...DEFAULT_COLUMN_KEYS], visible: defVisible });
+                      try { localStorage.removeItem(LS_COLUMNS_CONFIG); } catch(e) {}
+                    }}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                      background: 'transparent',
+                      color: isDark ? '#94A3B8' : '#64748B',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                    title="Restablecer al orden original de fábrica"
+                  >
+                    Reset
+                  </button>
                 </div>
               </div>
             )}
@@ -2843,575 +3088,432 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
               transition: 'background-color 0.25s ease, border-color 0.25s ease'
             }}
           >
-            <table className="spreadsheet-table" style={{ width: '100%', minWidth: '100%', borderCollapse: 'collapse', background: isDark ? '#0B0F19' : '#FFFFFF', color: isDark ? '#F1F5F9' : 'inherit', transition: 'background-color 0.25s ease' }}>
-            <thead>
-              <tr>
-                <th style={{ width: '36px', minWidth: '36px', textAlign: 'center', background: isDark ? '#111827' : '#F8FAFC', borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1', transition: 'background-color 0.25s ease' }}>
-                  <input
-                    type="checkbox"
-                    checked={filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id))}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        const next = new Set(selectedLeadIds);
-                        filteredLeads.forEach(l => next.add(l.id));
-                        setSelectedLeadIds(Array.from(next));
-                      } else {
-                        const filteredSet = new Set(filteredLeads.map(l => l.id));
-                        setSelectedLeadIds(prev => prev.filter(id => !filteredSet.has(id)));
-                      }
+            {/* ── Table Cell & Header Render Helpers ── */}
+            {(() => {
+              const renderHeaderCell = (colKey: ColumnKey) => {
+                const col = COLUMNS.find(c => c.key === colKey) || { key: colKey, label: colKey, shortLabel: colKey };
+                const isFilterable = colKey === 'gestCall' || colKey === 'distrito' || colKey === 'estadoCrm';
+                const hasActiveFilter = !!columnFilters[colKey];
+                const isFilterOpen = activeFilterCol === colKey;
+
+                let uniqueVals: string[] = [];
+                let initialSelected: string[] = [];
+                let renderLabel: ((val: string) => React.ReactNode) | undefined = undefined;
+
+                if (colKey === 'distrito') {
+                  uniqueVals = uniqueDistritos;
+                  initialSelected = columnFilters['distrito'] || uniqueDistritos;
+                } else if (colKey === 'gestCall') {
+                  uniqueVals = uniqueGestCalls;
+                  initialSelected = columnFilters['gestCall'] || uniqueGestCalls;
+                  renderLabel = (val: string) => {
+                    if (val === '__BLANK__') return <em style={{ color: '#94A3B8' }}>(Sin registrar)</em>;
+                    const opt = CALL_STATUS_OPTIONS.find(o => o.code === val);
+                    return opt ? `${opt.code} - ${opt.label}` : val;
+                  };
+                } else if (colKey === 'estadoCrm') {
+                  uniqueVals = uniqueEstadosCrm;
+                  initialSelected = columnFilters['estadoCrm'] || uniqueEstadosCrm;
+                  renderLabel = (val: string) => {
+                    const labels: Record<string, string> = {
+                      nuevo: '📥 Nuevo',
+                      contactado: '📞 Contactado',
+                      demo_agendada: '📅 Demo Agendada',
+                      ganado: '🏆 Ganado',
+                      descartado: '🚫 Descartado'
+                    };
+                    return labels[val] || val;
+                  };
+                }
+
+                return (
+                  <th
+                    key={col.key}
+                    style={{
+                      minWidth: col.minWidth || '120px',
+                      background: hasActiveFilter 
+                        ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#F0F5FA') 
+                        : (isDark ? '#111827' : (col.headerBg || '#F8FAFC')),
+                      color: isDark ? '#F1F5F9' : 'inherit',
+                      borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1',
+                      position: 'relative',
+                      transition: 'background-color 0.25s ease'
                     }}
-                    style={{ cursor: 'pointer', accentColor: '#10B981' }}
-                    title="Seleccionar / deseleccionar leads visibles para Campaña WhatsApp"
-                  />
-                </th>
-                {COLUMNS.map(col => {
-                  const isHidden = isColCollapsed(col.key);
-
-                  if (isHidden) {
-                    return (
-                      <th
-                        key={col.key}
-                        onClick={() => toggleCol(col.key)}
-                        style={{
-                          width: '28px',
-                          minWidth: '28px',
-                          maxWidth: '32px',
-                          padding: '8px 2px',
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          background: isDark ? '#111827' : '#F1F5F9',
-                          borderLeft: isDark ? '2px solid #334155' : '2px solid #CBD5E1',
-                          borderRight: isDark ? '2px solid #334155' : '2px solid #CBD5E1',
-                          color: isDark ? '#60A5FA' : '#004D99',
-                          borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1'
-                        }}
-                        title={`Expandir columna: ${col.label} (clic para ver)`}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                          <Icons.PlusSquare />
-                        </div>
-                      </th>
-                    );
-                  }
-
-                    const isFilterable = col.key === 'gestCall' || col.key === 'distrito' || col.key === 'estadoCrm';
-                    const hasActiveFilter = !!columnFilters[col.key];
-                    const isFilterOpen = activeFilterCol === col.key;
-
-                    let uniqueVals: string[] = [];
-                    let initialSelected: string[] = [];
-                    let renderLabel: ((val: string) => React.ReactNode) | undefined = undefined;
-
-                    if (col.key === 'distrito') {
-                      uniqueVals = uniqueDistritos;
-                      initialSelected = columnFilters['distrito'] || uniqueDistritos;
-                    } else if (col.key === 'gestCall') {
-                      uniqueVals = uniqueGestCalls;
-                      initialSelected = columnFilters['gestCall'] || uniqueGestCalls;
-                      renderLabel = (val: string) => {
-                        if (val === '__BLANK__') return <em style={{ color: '#94A3B8' }}>(Sin registrar)</em>;
-                        const opt = CALL_STATUS_OPTIONS.find(o => o.code === val);
-                        return opt ? `${opt.code} - ${opt.label}` : val;
-                      };
-                    } else if (col.key === 'estadoCrm') {
-                      uniqueVals = uniqueEstadosCrm;
-                      initialSelected = columnFilters['estadoCrm'] || uniqueEstadosCrm;
-                      renderLabel = (val: string) => {
-                        const labels: Record<string, string> = {
-                          nuevo: '📥 Nuevo',
-                          contactado: '📞 Contactado',
-                          demo_agendada: '📅 Demo Agendada',
-                          ganado: '🏆 Ganado',
-                          descartado: '🚫 Descartado'
-                        };
-                        return labels[val] || val;
-                      };
-                    }
-
-                    return (
-                      <th
-                        key={col.key}
-                        style={{
-                          minWidth: col.minWidth || '120px',
-                          background: hasActiveFilter 
-                            ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#F0F5FA') 
-                            : (isDark ? '#111827' : (col.headerBg || '#F8FAFC')),
-                          color: isDark ? '#F1F5F9' : 'inherit',
-                          borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1',
-                          position: 'relative',
-                          transition: 'background-color 0.25s ease'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                          <span style={{ color: hasActiveFilter ? (isDark ? '#93C5FD' : '#003870') : (isDark ? '#E2E8F0' : 'inherit'), fontWeight: hasActiveFilter ? 800 : 700 }}>
-                            {col.label}
-                          </span>
-                          
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            {isFilterable && (
-                              <button
-                                ref={(el) => { filterBtnRefs.current[col.key] = el; }}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveFilterCol(isFilterOpen ? null : col.key);
-                                }}
-                                style={{
-                                  border: hasActiveFilter ? (isDark ? '1px solid #2563EB' : '1px solid #93C5FD') : 'none',
-                                  background: hasActiveFilter ? (isDark ? 'rgba(59, 130, 246, 0.3)' : '#D1E2F5') : 'transparent',
-                                  cursor: 'pointer',
-                                  color: hasActiveFilter ? (isDark ? '#93C5FD' : '#003870') : (isDark ? '#64748B' : '#94A3B8'),
-                                  padding: '2px 4px',
-                                  borderRadius: '4px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  transition: 'all 0.15s'
-                                }}
-                                title={`Filtrar por ${col.label} (estilo Google Sheets)`}
-                              >
-                                <Icons.Filter />
-                              </button>
-                            )}
-
-                            {col.key !== 'acciones' && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleCol(col.key);
-                                }}
-                                style={{
-                                  border: 'none',
-                                  background: 'transparent',
-                                  cursor: 'pointer',
-                                  color: '#94A3B8',
-                                  padding: '2px 4px',
-                                  borderRadius: '4px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center'
-                                }}
-                                title={`Retraer columna ${col.label}`}
-                              >
-                                <Icons.MinusSquare />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Popover de Filtro Google Sheets */}
-                        {isFilterable && isFilterOpen && (
-                          <ColumnFilterPopover
-                            columnKey={col.key as 'gestCall' | 'distrito' | 'estadoCrm'}
-                            columnLabel={col.label}
-                            uniqueValues={uniqueVals}
-                            selectedValues={initialSelected}
-                            triggerRef={{ current: filterBtnRefs.current[col.key] || null }}
-                            onApply={(selected) => {
-                              if (selected.length === uniqueVals.length) {
-                                // Todos seleccionados = sin filtro activo en esta columna
-                                setColumnFilters(prev => {
-                                  const next = { ...prev };
-                                  delete next[col.key];
-                                  return next;
-                                });
-                              } else {
-                                setColumnFilters(prev => ({
-                                  ...prev,
-                                  [col.key]: selected
-                                }));
-                              }
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      <span style={{ color: hasActiveFilter ? (isDark ? '#93C5FD' : '#003870') : (isDark ? '#E2E8F0' : 'inherit'), fontWeight: hasActiveFilter ? 800 : 700 }}>
+                        {col.label}
+                      </span>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        {isFilterable && (
+                          <button
+                            ref={(el) => { filterBtnRefs.current[col.key] = el; }}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveFilterCol(isFilterOpen ? null : colKey);
                             }}
-                            onClose={() => setActiveFilterCol(null)}
-                            renderValueLabel={renderLabel}
-                            isDark={isDark}
-                          />
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-
-            <tbody>
-              {filteredLeads.length === 0 ? (
-                <tr>
-                  <td colSpan={16} style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>No hay prospectos en la pestaña "{activeTab === '__ALL__' ? 'Todas' : activeTab}".</div>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '4px' }}>
-                      Puedes registrar nuevos leads con el formulario seleccionando esta pestaña o mover prospectos desde otra pestaña.
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredLeads.map((lead) => {
-                  const cleanPhone = (getLeadField(lead, 'celular') || '').replace(/\D/g, '');
-                  const waUrl = `https://wa.me/51${cleanPhone}?text=${encodeURIComponent(`Hola ${getLeadField(lead, 'nombreMadre')}, te saluda el equipo de VitalityOS. Un gusto saludarte tras la Expo Maternidad.`)}`;
-
-                  const currentGestCall = getLeadField(lead, 'gestCall') || '';
-                  const currentObserCalls = getLeadField(lead, 'obserCalls') || '';
-                  const leadHistory = getLeadHistory(lead);
-                  const leadTab = getLeadSheetTab(lead);
-                  const isRowSelected = selectedLeadIds.includes(lead.id);
-
-                  const rowBg = isRowSelected 
-                    ? (isDark ? 'rgba(16, 185, 129, 0.2)' : '#ECFDF5') 
-                    : (isDark ? (leads.indexOf(lead) % 2 === 0 ? '#0B0F19' : '#0E1422') : (leads.indexOf(lead) % 2 === 0 ? '#FFFFFF' : '#FAFAFA'));
-
-                  return (
-                    <tr 
-                      key={lead.id} 
-                      style={{ 
-                        background: rowBg,
-                        borderBottom: isDark ? '1px solid #1E293B' : '1px solid #E2E8F0',
-                        transition: 'background-color 0.15s ease'
-                      }}
-                    >
-                      <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                        <input
-                          type="checkbox"
-                          checked={isRowSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedLeadIds(prev => [...prev, lead.id]);
-                            } else {
-                              setSelectedLeadIds(prev => prev.filter(id => id !== lead.id));
-                            }
-                          }}
-                          style={{ cursor: 'pointer', accentColor: '#10B981' }}
-                          title="Seleccionar este prospecto para Campaña WhatsApp"
-                        />
-                      </td>
-                      {/* 1. Nombre Madre + Selector de Pestaña para traspaso */}
-                      {isColCollapsed('nombreMadre') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td style={{ verticalAlign: 'top' }}>
-                          <EditableCell
-                            leadId={lead.id}
-                            field="nombreMadre"
-                            value={getLeadField(lead, 'nombreMadre')}
-                            onSave={handleSaveField}
-                            maxChars={25}
-                            forceExpandAll={expandAllTexts}
-                            fullWidth={false}
-                            placeholder="Nombre..."
-                            style={{ fontWeight: 600, color: isDark ? '#F8FAFC' : '#1E293B' }}
-                            isDark={isDark}
-                          />
-                          {/* Mini Selector de Pestaña para traspasar el lead */}
-                          <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ fontSize: '0.65rem', color: isDark ? '#64748B' : '#94A3B8' }}>Pestaña:</span>
-                            <select
-                              value={leadTab}
-                              onChange={(e) => handleMoveLeadToTab(lead.id, e.target.value)}
-                              style={{
-                                fontSize: '0.68rem',
-                                padding: '1px 4px',
-                                borderRadius: '4px',
-                                border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
-                                background: isDark ? '#1E293B' : '#F8FAFC',
-                                color: isDark ? '#60A5FA' : '#004D99',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                outline: 'none',
-                                transition: 'all 0.15s ease'
-                              }}
-                              title="Traspasar este lead a otra pestaña"
-                            >
-                              {sheetTabs.map(t => (
-                                <option key={t} value={t}>{t}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </td>
-                      )}
-
-                      {/* 2. Celular / WhatsApp + Indicador SVG de Agenda */}
-                      {isColCollapsed('celular') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (() => {
-                        const rawPhone = getLeadField(lead, 'celular') || '';
-                        const phoneNorm = normalizePhone(rawPhone);
-                        const matchedContact = phoneNorm ? contactsMap.get(phoneNorm) : undefined;
-                        const isSaved = !!matchedContact;
-
-                        return (
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              {/* Indicador Visual SVG Sin Texto: Verde (Agendado) / Amarillo (No Agendado) */}
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'help'
-                                }}
-                                title={isSaved ? `Agendado: ${matchedContact.name}` : 'No agendado en contactos'}
-                              >
-                                {isSaved ? <Icons.ContactSaved /> : <Icons.ContactUnsaved />}
-                              </span>
-
-                              <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem', color: isDark ? '#E2E8F0' : 'inherit' }}>
-                                {rawPhone}
-                              </span>
-
-                              {cleanPhone && (
-                                <a
-                                  href={waUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  style={{ color: '#10B981', display: 'inline-flex' }}
-                                  title="Chat WhatsApp"
-                                >
-                                  <Icons.MessageCircle />
-                                </a>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })()}
-
-                      {/* 3. Gestión Call (Selector minimalista + Botón Check + Historial 1/2 clics) */}
-                      {isColCollapsed('gestCall') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td style={{ background: isDark ? 'rgba(59, 130, 246, 0.12)' : '#F0F5FA', verticalAlign: 'middle', transition: 'background-color 0.25s ease' }}>
-                          <GestCallCell
-                            lead={lead}
-                            currentCode={currentGestCall}
-                            history={leadHistory}
-                            onConfirmCode={(code) => handleRegisterCallLog(lead.id, code)}
-                            onOpenHistory={(targetLead, mode) => {
-                              setActiveHistoryModal({ lead: targetLead, mode });
-                            }}
-                            isDark={isDark}
-                          />
-                        </td>
-                      )}
-
-                      {/* 4. Observaciones Calls */}
-                      {isColCollapsed('obserCalls') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', verticalAlign: 'top', transition: 'background-color 0.25s ease' }}>
-                          <EditableCell
-                            leadId={lead.id}
-                            field="obserCalls"
-                            value={currentObserCalls}
-                            onSave={async (lid, f, val) => {
-                              await handleSaveField(lid, f, val);
-                              const targetLead = leads.find(l => l.id === lid);
-                              if (targetLead) {
-                                const hist = getLeadHistory(targetLead);
-                                if (hist.length > 0) {
-                                  hist[0].observation = val;
-                                  setLocalEdits(prev => ({
-                                    ...prev,
-                                    [lid]: {
-                                      ...(prev[lid] || {}),
-                                      callHistory: [...hist]
-                                    }
-                                  }));
-                                  try {
-                                    await updateCloudLeadField(lid, 'callHistory', hist);
-                                  } catch (e) {}
-                                }
-                              }
-                            }}
-                            style={{ color: isDark ? '#2DD4BF' : '#0F766E', fontSize: '0.82rem' }}
-                            isDark={isDark}
-                            maxChars={100}
-                            forceExpandAll={expandAllTexts}
-                            fullWidth={true}
-                            placeholder="Observaciones de la llamada..."
-                          />
-                        </td>
-                      )}
-
-                      {/* 5. Distrito */}
-                      {isColCollapsed('distrito') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td>
-                          <EditableCell
-                            leadId={lead.id}
-                            field="distrito"
-                            value={getLeadField(lead, 'distrito')}
-                            onSave={handleSaveField}
-                            maxChars={20}
-                            forceExpandAll={expandAllTexts}
-                            fullWidth={false}
-                            placeholder="Distrito..."
-                            style={{ color: isDark ? '#CBD5E1' : 'inherit' }}
-                            isDark={isDark}
-                          />
-                        </td>
-                      )}
-
-                      {/* 6. Observaciones del Lead */}
-                      {isColCollapsed('observaciones') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td style={{ verticalAlign: 'top' }}>
-                          <EditableCell
-                            leadId={lead.id}
-                            field="observaciones"
-                            value={getLeadField(lead, 'observaciones')}
-                            onSave={handleSaveField}
-                            style={{ fontStyle: 'italic', color: isDark ? '#94A3B8' : '#475569' }}
-                            maxChars={100}
-                            forceExpandAll={expandAllTexts}
-                            fullWidth={true}
-                            placeholder="Observaciones del lead..."
-                            isDark={isDark}
-                          />
-                        </td>
-                      )}
-
-                      {/* 7. Estado CRM */}
-                      {isColCollapsed('estadoCrm') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td>
-                          <select
-                            value={getLeadField(lead, 'estadoCrm') || 'nuevo'}
-                            onChange={(e) => handleUpdateStatus(lead.id, e.target.value as LeadData['estadoCrm'])}
                             style={{
-                              fontSize: '0.75rem',
-                              padding: '4px 6px',
-                              borderRadius: '6px',
+                              border: hasActiveFilter ? (isDark ? '1px solid #2563EB' : '1px solid #93C5FD') : 'none',
+                              background: hasActiveFilter ? (isDark ? 'rgba(59, 130, 246, 0.3)' : '#D1E2F5') : 'transparent',
+                              cursor: 'pointer',
+                              color: hasActiveFilter ? (isDark ? '#93C5FD' : '#003870') : (isDark ? '#64748B' : '#94A3B8'),
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              transition: 'all 0.15s'
+                            }}
+                            title={`Filtrar por ${col.label}`}
+                          >
+                            <Icons.Filter />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Popover de Filtro */}
+                    {isFilterable && isFilterOpen && (
+                      <ColumnFilterPopover
+                        columnKey={col.key as 'gestCall' | 'distrito' | 'estadoCrm'}
+                        columnLabel={col.label}
+                        uniqueValues={uniqueVals}
+                        selectedValues={initialSelected}
+                        triggerRef={{ current: filterBtnRefs.current[col.key] || null }}
+                        onApply={(selected) => {
+                          if (selected.length === uniqueVals.length) {
+                            setColumnFilters(prev => {
+                              const next = { ...prev };
+                              delete next[col.key];
+                              return next;
+                            });
+                          } else {
+                            setColumnFilters(prev => ({
+                              ...prev,
+                              [col.key]: selected
+                            }));
+                          }
+                        }}
+                        onClose={() => setActiveFilterCol(null)}
+                        renderValueLabel={renderLabel}
+                        isDark={isDark}
+                      />
+                    )}
+                  </th>
+                );
+              };
+
+              const renderLeadCell = (lead: LeadData, colKey: ColumnKey) => {
+                const leadTab = getLeadSheetTab(lead);
+                const cleanPhone = (getLeadField(lead, 'celular') || '').replace(/\D/g, '');
+                const waUrl = `https://wa.me/51${cleanPhone}?text=${encodeURIComponent(`Hola ${getLeadField(lead, 'nombreMadre')}, te saluda el equipo de VitalityOS. Te contactamos sobre lo conversado en la Expo Maternidad.`)}`;
+
+                switch (colKey) {
+                  case 'nombreMadre':
+                    return (
+                      <td key={colKey} style={{ verticalAlign: 'top' }}>
+                        <EditableCell
+                          leadId={lead.id}
+                          field="nombreMadre"
+                          value={getLeadField(lead, 'nombreMadre')}
+                          onSave={handleSaveField}
+                          maxChars={25}
+                          forceExpandAll={expandAllTexts}
+                          fullWidth={false}
+                          placeholder="Nombre..."
+                          style={{ fontWeight: 600, color: isDark ? '#F8FAFC' : '#1E293B' }}
+                          isDark={isDark}
+                        />
+                        <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontSize: '0.65rem', color: isDark ? '#64748B' : '#94A3B8' }}>Pestaña:</span>
+                          <select
+                            value={leadTab}
+                            onChange={(e) => handleMoveLeadToTab(lead.id, e.target.value)}
+                            style={{
+                              fontSize: '0.68rem',
+                              padding: '1px 4px',
+                              borderRadius: '4px',
                               border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
                               background: isDark ? '#1E293B' : '#F8FAFC',
-                              fontWeight: 600,
-                              color: isDark ? '#F1F5F9' : '#334155',
+                              color: isDark ? '#60A5FA' : '#004D99',
+                              fontWeight: 700,
                               cursor: 'pointer',
                               outline: 'none',
                               transition: 'all 0.15s ease'
                             }}
+                            title="Traspasar este lead a otra pestaña"
                           >
-                            <option value="nuevo">📥 Nuevo</option>
-                            <option value="contactado">📞 Contactado</option>
-                            <option value="demo_agendada">📅 Demo Agendada</option>
-                            <option value="ganado">🏆 Ganado</option>
-                            <option value="descartado">🚫 Descartado</option>
+                            {sheetTabs.map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
                           </select>
-                        </td>
-                      )}
+                        </div>
+                      </td>
+                    );
 
-                      {/* 8. Fecha */}
-                      {isColCollapsed('timestamp') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td style={{ whiteSpace: 'nowrap', fontSize: '0.78rem', color: isDark ? '#94A3B8' : '#64748B' }}>
-                          {lead.timestamp}
-                        </td>
-                      )}
+                  case 'celular': {
+                    const rawPhone = getLeadField(lead, 'celular') || '';
+                    const phoneNorm = normalizePhone(rawPhone);
+                    const matchedContact = phoneNorm ? contactsMap.get(phoneNorm) : undefined;
+                    const isSaved = !!matchedContact;
 
-                      {/* 9. Edad Hijos */}
-                      {isColCollapsed('edadHijos') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td style={{ whiteSpace: 'nowrap' }}>
+                    return (
+                      <td key={colKey}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span
                             style={{
-                              fontSize: '0.75rem',
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              background: lead.edadHijos?.includes('Menores') 
-                                ? (isDark ? 'rgba(59, 130, 246, 0.2)' : '#F0F5FA') 
-                                : (lead.edadHijos?.includes('Mayores') 
-                                  ? (isDark ? 'rgba(236, 72, 153, 0.2)' : '#FDF2F8') 
-                                  : (isDark ? 'rgba(16, 185, 129, 0.2)' : '#F0FDF4')),
-                              color: lead.edadHijos?.includes('Menores') 
-                                ? (isDark ? '#60A5FA' : '#004D99') 
-                                : (lead.edadHijos?.includes('Mayores') 
-                                  ? (isDark ? '#F472B6' : '#DB2777') 
-                                  : (isDark ? '#34D399' : '#16A34A')),
-                              border: isDark ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                              fontWeight: 600
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'help'
                             }}
+                            title={isSaved ? `Agendado: ${matchedContact.name}` : 'No agendado en contactos'}
                           >
-                            {lead.edadHijos}
+                            {isSaved ? <Icons.ContactSaved /> : <Icons.ContactUnsaved />}
                           </span>
-                        </td>
-                      )}
-
-                      {/* 10. Nivel Preocupación */}
-                      {isColCollapsed('nivelPreocupacion') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td style={{ textAlign: 'center', fontWeight: 700, color: Number(lead.nivelPreocupacion) >= 8 ? '#EF4444' : '#F59E0B' }}>
-                          {lead.nivelPreocupacion}
-                        </td>
-                      )}
-
-                      {/* 11. Conocimiento Daño */}
-                      {isColCollapsed('conocimientoDano') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td>
-                          <ExpandableText
-                            text={lead.conocimientoDano}
-                            maxChars={35}
-                            forceExpandAll={expandAllTexts}
-                            fullWidth={true}
-                            style={{ color: isDark ? '#CBD5E1' : 'inherit' }}
-                            isDark={isDark}
-                          />
-                        </td>
-                      )}
-
-                      {/* 12. Pregunta Condicional */}
-                      {isColCollapsed('preguntaCondicional') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td>
-                          <ExpandableText
-                            text={lead.preguntaCondicional}
-                            maxChars={35}
-                            forceExpandAll={expandAllTexts}
-                            fullWidth={true}
-                            style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-                            isDark={isDark}
-                          />
-                        </td>
-                      )}
-
-                      {/* 13. Respuesta Condicional */}
-                      {isColCollapsed('respuestaCondicional') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td>
-                          <ExpandableText
-                            text={lead.respuestaCondicional}
-                            maxChars={25}
-                            forceExpandAll={expandAllTexts}
-                            fullWidth={true}
-                            style={{ fontWeight: 500, color: isDark ? '#F8FAFC' : 'inherit' }}
-                            isDark={isDark}
-                          />
-                        </td>
-                      )}
-
-                      {/* 14. Interés Solución */}
-                      {isColCollapsed('interesSolucion') ? (
-                        <td style={{ background: isDark ? '#111827' : '#F8FAFC', textAlign: 'center', borderLeft: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', borderRight: isDark ? '2px solid #1E293B' : '2px solid #CBD5E1', padding: '4px 0' }} />
-                      ) : (
-                        <td>
-                          <span
-                            style={{
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              color: lead.interesSolucion === 'Sí' || lead.interesSolucion === 'Si' ? '#16A34A' : '#DC2626'
-                            }}
-                          >
-                            {lead.interesSolucion}
+                          <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.88rem', color: isDark ? '#E2E8F0' : 'inherit' }}>
+                            {rawPhone}
                           </span>
-                        </td>
-                      )}
+                          {cleanPhone && (
+                            <a
+                              href={waUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: '#10B981', display: 'inline-flex' }}
+                              title="Chat WhatsApp"
+                            >
+                              <Icons.MessageCircle />
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  }
 
-                      {/* 15. Acciones */}
-                      <td>
+                  case 'gestCall': {
+                    const currentGestCall = getLeadField(lead, 'gestCall');
+                    const leadHistory = getLeadHistory(lead);
+                    return (
+                      <td key={colKey} style={{ background: isDark ? 'rgba(59, 130, 246, 0.12)' : '#F0F5FA', verticalAlign: 'middle', transition: 'background-color 0.25s ease' }}>
+                        <GestCallCell
+                          lead={lead}
+                          currentCode={currentGestCall}
+                          history={leadHistory}
+                          onConfirmCode={(code) => handleRegisterCallLog(lead.id, code)}
+                          onOpenHistory={(targetLead, mode) => {
+                            setActiveHistoryModal({ lead: targetLead, mode });
+                          }}
+                          isDark={isDark}
+                        />
+                      </td>
+                    );
+                  }
+
+                  case 'obserCalls': {
+                    const currentObserCalls = getLeadField(lead, 'obserCalls');
+                    return (
+                      <td key={colKey} style={{ background: isDark ? '#111827' : '#F8FAFC', verticalAlign: 'top', transition: 'background-color 0.25s ease' }}>
+                        <EditableCell
+                          leadId={lead.id}
+                          field="obserCalls"
+                          value={currentObserCalls}
+                          onSave={async (lid, f, val) => {
+                            await handleSaveField(lid, f, val);
+                            const targetLead = leads.find(l => l.id === lid);
+                            if (targetLead) {
+                              const hist = getLeadHistory(targetLead);
+                              if (hist.length > 0) {
+                                hist[0].observation = val;
+                                setLocalEdits(prev => ({
+                                  ...prev,
+                                  [lid]: {
+                                    ...(prev[lid] || {}),
+                                    callHistory: [...hist]
+                                  }
+                                }));
+                                try {
+                                  await updateCloudLeadField(lid, 'callHistory', hist);
+                                } catch (e) {}
+                              }
+                            }
+                          }}
+                          style={{ color: isDark ? '#2DD4BF' : '#0F766E', fontSize: '0.82rem' }}
+                          isDark={isDark}
+                          maxChars={100}
+                          forceExpandAll={expandAllTexts}
+                          fullWidth={true}
+                          placeholder="Observaciones de la llamada..."
+                        />
+                      </td>
+                    );
+                  }
+
+                  case 'distrito':
+                    return (
+                      <td key={colKey}>
+                        <EditableCell
+                          leadId={lead.id}
+                          field="distrito"
+                          value={getLeadField(lead, 'distrito')}
+                          onSave={handleSaveField}
+                          maxChars={20}
+                          forceExpandAll={expandAllTexts}
+                          fullWidth={false}
+                          placeholder="Distrito..."
+                          style={{ color: isDark ? '#CBD5E1' : 'inherit' }}
+                          isDark={isDark}
+                        />
+                      </td>
+                    );
+
+                  case 'observaciones':
+                    return (
+                      <td key={colKey} style={{ verticalAlign: 'top' }}>
+                        <EditableCell
+                          leadId={lead.id}
+                          field="observaciones"
+                          value={getLeadField(lead, 'observaciones')}
+                          onSave={handleSaveField}
+                          style={{ fontStyle: 'italic', color: isDark ? '#94A3B8' : '#475569' }}
+                          maxChars={100}
+                          forceExpandAll={expandAllTexts}
+                          fullWidth={true}
+                          placeholder="Observaciones del lead..."
+                          isDark={isDark}
+                        />
+                      </td>
+                    );
+
+                  case 'estadoCrm':
+                    return (
+                      <td key={colKey}>
+                        <select
+                          value={getLeadField(lead, 'estadoCrm') || 'nuevo'}
+                          onChange={(e) => handleUpdateStatus(lead.id, e.target.value as LeadData['estadoCrm'])}
+                          style={{
+                            fontSize: '0.75rem',
+                            padding: '4px 6px',
+                            borderRadius: '6px',
+                            border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                            background: isDark ? '#1E293B' : '#F8FAFC',
+                            fontWeight: 600,
+                            color: isDark ? '#F1F5F9' : '#334155',
+                            cursor: 'pointer',
+                            outline: 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <option value="nuevo">📥 Nuevo</option>
+                          <option value="contactado">📞 Contactado</option>
+                          <option value="demo_agendada">📅 Demo Agendada</option>
+                          <option value="ganado">🏆 Ganado</option>
+                          <option value="descartado">🚫 Descartado</option>
+                        </select>
+                      </td>
+                    );
+
+                  case 'timestamp':
+                    return (
+                      <td key={colKey} style={{ whiteSpace: 'nowrap', fontSize: '0.78rem', color: isDark ? '#94A3B8' : '#64748B' }}>
+                        {lead.timestamp}
+                      </td>
+                    );
+
+                  case 'edadHijos':
+                    return (
+                      <td key={colKey} style={{ whiteSpace: 'nowrap' }}>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            background: lead.edadHijos?.includes('Menores') 
+                              ? (isDark ? 'rgba(59, 130, 246, 0.2)' : '#F0F5FA') 
+                              : (lead.edadHijos?.includes('Mayores') 
+                                ? (isDark ? 'rgba(236, 72, 153, 0.2)' : '#FDF2F8') 
+                                : (isDark ? 'rgba(16, 185, 129, 0.2)' : '#F0FDF4')),
+                            color: lead.edadHijos?.includes('Menores') 
+                              ? (isDark ? '#60A5FA' : '#004D99') 
+                              : (lead.edadHijos?.includes('Mayores') 
+                                ? (isDark ? '#F472B6' : '#DB2777') 
+                                : (isDark ? '#34D399' : '#16A34A')),
+                            border: isDark ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                            fontWeight: 600
+                          }}
+                        >
+                          {lead.edadHijos}
+                        </span>
+                      </td>
+                    );
+
+                  case 'nivelPreocupacion':
+                    return (
+                      <td key={colKey} style={{ textAlign: 'center', fontWeight: 700, color: Number(lead.nivelPreocupacion) >= 8 ? '#EF4444' : '#F59E0B' }}>
+                        {lead.nivelPreocupacion}
+                      </td>
+                    );
+
+                  case 'conocimientoDano':
+                    return (
+                      <td key={colKey}>
+                        <ExpandableText
+                          text={lead.conocimientoDano}
+                          maxChars={35}
+                          forceExpandAll={expandAllTexts}
+                          fullWidth={true}
+                          style={{ color: isDark ? '#CBD5E1' : 'inherit' }}
+                          isDark={isDark}
+                        />
+                      </td>
+                    );
+
+                  case 'preguntaCondicional':
+                    return (
+                      <td key={colKey}>
+                        <ExpandableText
+                          text={lead.preguntaCondicional}
+                          maxChars={35}
+                          forceExpandAll={expandAllTexts}
+                          fullWidth={true}
+                          style={{ color: isDark ? '#94A3B8' : '#64748B' }}
+                          isDark={isDark}
+                        />
+                      </td>
+                    );
+
+                  case 'respuestaCondicional':
+                    return (
+                      <td key={colKey}>
+                        <ExpandableText
+                          text={lead.respuestaCondicional}
+                          maxChars={25}
+                          forceExpandAll={expandAllTexts}
+                          fullWidth={true}
+                          style={{ fontWeight: 500, color: isDark ? '#F8FAFC' : 'inherit' }}
+                          isDark={isDark}
+                        />
+                      </td>
+                    );
+
+                  case 'interesSolucion':
+                    return (
+                      <td key={colKey}>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            color: lead.interesSolucion === 'Sí' || lead.interesSolucion === 'Si' ? '#16A34A' : '#DC2626'
+                          }}
+                        >
+                          {lead.interesSolucion}
+                        </span>
+                      </td>
+                    );
+
+                  case 'acciones':
+                    return (
+                      <td key={colKey}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           {isFichaEligible(lead) && (
                             <button
@@ -3451,16 +3553,116 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                           </button>
                         </div>
                       </td>
+                    );
+
+                  default:
+                    return null;
+                }
+              };
+
+              return (
+                <table className="spreadsheet-table" style={{ width: '100%', minWidth: '100%', borderCollapse: 'collapse', background: isDark ? '#0B0F19' : '#FFFFFF', color: isDark ? '#F1F5F9' : 'inherit', transition: 'background-color 0.25s ease' }}>
+                  <thead>
+                    <tr>
+                      {/* Checkbox Columna Seleccionar Todo */}
+                      <th
+                        style={{
+                          width: '36px',
+                          minWidth: '36px',
+                          textAlign: 'center',
+                          background: isDark ? '#111827' : '#F8FAFC',
+                          borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1',
+                          padding: '8px 4px'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const next = new Set(selectedLeadIds);
+                              filteredLeads.forEach(l => next.add(l.id));
+                              setSelectedLeadIds(Array.from(next));
+                            } else {
+                              const filteredSet = new Set(filteredLeads.map(l => l.id));
+                              setSelectedLeadIds(prev => prev.filter(id => !filteredSet.has(id)));
+                            }
+                          }}
+                          style={{ cursor: 'pointer', accentColor: '#10B981' }}
+                          title="Seleccionar / deseleccionar leads visibles"
+                        />
+                      </th>
+                      {orderedVisibleColumns.map(colKey => renderHeaderCell(colKey))}
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  </thead>
+
+                  <tbody>
+                    {filteredLeads.length === 0 ? (
+                      <tr>
+                        <td colSpan={orderedVisibleColumns.length + 1} style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>
+                          <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>No hay prospectos en la pestaña "{activeTab === '__ALL__' ? 'Todas' : activeTab}".</div>
+                          <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '4px' }}>
+                            {searchTerm ? 'Prueba con otro término de búsqueda o limpia los filtros.' : 'Los nuevos prospectos que ingreses aparecerán aquí.'}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredLeads.map((lead, index) => {
+                        const isRowSelected = selectedLeadIds.includes(lead.id);
+                        const rowBg = isRowSelected
+                          ? (isDark ? 'rgba(16, 185, 129, 0.16)' : '#ECFDF5')
+                          : (index % 2 === 0
+                              ? (isDark ? '#0B0F19' : '#FFFFFF')
+                              : (isDark ? '#111827' : '#F8FAFC'));
+
+                        return (
+                          <tr
+                            key={lead.id}
+                            style={{
+                              background: rowBg,
+                              borderBottom: isDark ? '1px solid #1E293B' : '1px solid #F1F5F9',
+                              transition: 'background-color 0.15s ease'
+                            }}
+                          >
+                            {/* Checkbox Fila */}
+                            <td
+                              style={{
+                                width: '36px',
+                                minWidth: '36px',
+                                textAlign: 'center',
+                                verticalAlign: 'middle',
+                                padding: '6px 4px'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isRowSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedLeadIds(prev => Array.from(new Set([...prev, lead.id])));
+                                  } else {
+                                    setSelectedLeadIds(prev => prev.filter(id => id !== lead.id));
+                                  }
+                                }}
+                                style={{ cursor: 'pointer', accentColor: '#10B981' }}
+                                title="Seleccionar este prospecto"
+                              />
+                            </td>
+
+                            {/* Celdas dinámicas según el orden y visibilidad configurados */}
+                            {orderedVisibleColumns.map(colKey => renderLeadCell(lead, colKey))}
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              );
+            })()}
         </div>
       )}
 
-      {/* ── VIEW 2: CRM KANBAN PIPELINE (Horizontal Snap Swipe on Mobile & Ergonomic Cards) ── */}
+      {/* ── VIEW 2: CRM KANBAN PIPELINE (Drag & Drop + Ergonomic Cards) ── */}
       {viewMode === 'crm' && (
         <div
           className="kanban-board-container"
@@ -3477,18 +3679,45 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
         >
           {crmStages.map(stage => {
             const stageLeads = filteredLeads.filter(l => (getLeadField(l, 'estadoCrm') || 'nuevo') === stage.key);
+            const isDropTarget = dragOverStage === stage.key;
+
             return (
               <div
                 key={stage.key}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverStage !== stage.key) {
+                    setDragOverStage(stage.key);
+                  }
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setDragOverStage(null);
+                  }
+                }}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  setDragOverStage(null);
+                  const droppedLeadId = e.dataTransfer.getData('text/plain') || draggedLeadId;
+                  if (droppedLeadId) {
+                    await handleUpdateStatus(droppedLeadId, stage.key as LeadData['estadoCrm']);
+                  }
+                  setDraggedLeadId(null);
+                }}
                 style={{
                   minWidth: '270px',
                   width: 'calc(100vw - 48px)',
                   maxWidth: '320px',
                   flexShrink: 0,
                   scrollSnapAlign: 'start',
-                  background: isDark ? '#0F172A' : '#FFFFFF',
+                  background: isDropTarget 
+                    ? (isDark ? 'rgba(0, 77, 153, 0.22)' : '#EFF6FF') 
+                    : (isDark ? '#0F172A' : '#FFFFFF'),
                   borderRadius: '12px',
-                  border: isDark ? '1.5px solid #1E293B' : '1.5px solid #E2E8F0',
+                  border: isDropTarget 
+                    ? `2px dashed ${stage.color}` 
+                    : (isDark ? '1.5px solid #1E293B' : '1.5px solid #E2E8F0'),
                   borderTop: `4px solid ${stage.color}`,
                   padding: '12px',
                   display: 'flex',
@@ -3500,7 +3729,14 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #F1F5F9' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#F8FAFC' : '#1E293B' }}>{stage.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#F8FAFC' : '#1E293B' }}>{stage.label}</span>
+                    {isDropTarget && (
+                      <span style={{ fontSize: '0.68rem', color: stage.color, fontWeight: 700 }}>
+                        (Soltar aquí)
+                      </span>
+                    )}
+                  </div>
                   <span style={{ background: isDark ? '#1E293B' : '#F1F5F9', color: isDark ? '#CBD5E1' : '#475569', fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '10px' }}>
                     {stageLeads.length}
                   </span>
@@ -3508,8 +3744,17 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
 
                 <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
                   {stageLeads.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94A3B8', fontSize: '0.8rem', border: '1px dashed #E2E8F0', borderRadius: '8px' }}>
-                      Sin prospectos
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '30px 10px',
+                      color: isDropTarget ? stage.color : '#94A3B8',
+                      fontSize: '0.8rem',
+                      border: isDropTarget ? `2px dashed ${stage.color}` : '1px dashed #E2E8F0',
+                      borderRadius: '8px',
+                      background: isDropTarget ? (isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF') : 'transparent',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      {isDropTarget ? `Soltar lead aquí (${stage.label})` : 'Sin prospectos'}
                     </div>
                   ) : (
                     stageLeads.map(lead => {
@@ -3519,10 +3764,21 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                       const gestCallVal = getLeadField(lead, 'gestCall');
                       const gestOpt = CALL_STATUS_OPTIONS.find(o => o.code === gestCallVal || o.label === gestCallVal);
                       const leadTab = getLeadSheetTab(lead);
+                      const isCardDragged = draggedLeadId === lead.id;
 
                       return (
                         <div
                           key={lead.id}
+                          draggable={true}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', lead.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                            setDraggedLeadId(lead.id);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedLeadId(null);
+                            setDragOverStage(null);
+                          }}
                           style={{
                             background: isDark ? '#1E293B' : '#F8FAFC',
                             border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
@@ -3531,16 +3787,34 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '6px',
-                            transition: 'all 0.2s ease'
+                            cursor: 'grab',
+                            opacity: isCardDragged ? 0.35 : 1,
+                            transform: isCardDragged ? 'scale(0.96)' : 'none',
+                            boxShadow: isCardDragged ? '0 10px 25px rgba(0,0,0,0.3)' : 'none',
+                            transition: 'all 0.2s ease',
+                            userSelect: 'none'
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                              <strong style={{ fontSize: '0.88rem', color: isDark ? '#F8FAFC' : '#0F172A', display: 'block' }}>{getLeadField(lead, 'nombreMadre')}</strong>
-                              <span style={{ fontSize: '0.68rem', color: '#004D99', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                                {leadTab}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                              {/* 6-dot drag indicator */}
+                              <span style={{ color: '#94A3B8', cursor: 'grab', marginTop: '2px', display: 'flex' }} title="Arrastrar para mover de etapa en el embudo">
+                                <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+                                  <circle cx="2" cy="2" r="1.5" />
+                                  <circle cx="8" cy="2" r="1.5" />
+                                  <circle cx="2" cy="7" r="1.5" />
+                                  <circle cx="8" cy="7" r="1.5" />
+                                  <circle cx="2" cy="12" r="1.5" />
+                                  <circle cx="8" cy="12" r="1.5" />
+                                </svg>
                               </span>
+                              <div>
+                                <strong style={{ fontSize: '0.88rem', color: isDark ? '#F8FAFC' : '#0F172A', display: 'block' }}>{getLeadField(lead, 'nombreMadre')}</strong>
+                                <span style={{ fontSize: '0.68rem', color: '#004D99', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                  {leadTab}
+                                </span>
+                              </div>
                             </div>
                             <span style={{ fontSize: '0.72rem', color: '#EF4444', fontWeight: 700 }}>Dolor: {lead.nivelPreocupacion}/10</span>
                           </div>
@@ -3625,6 +3899,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                               )}
                             </div>
 
+                            {/* Dropdown de cambio manual o arrastre */}
                             <select
                               value={getLeadField(lead, 'estadoCrm') || 'nuevo'}
                               onChange={(e) => handleUpdateStatus(lead.id, e.target.value as LeadData['estadoCrm'])}
@@ -3633,8 +3908,10 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                                 padding: '2px 4px',
                                 borderRadius: '4px',
                                 border: '1px solid #CBD5E1',
-                                background: 'white'
+                                background: 'white',
+                                cursor: 'pointer'
                               }}
+                              title="Cambiar etapa (o arrastra la tarjeta a otra columna)"
                             >
                               <option value="nuevo">Nuevo</option>
                               <option value="contactado">Contactado</option>
@@ -4042,6 +4319,85 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     </div>
 
     {/* Modal de Portal Administrativo (Roles & Traspasos) */}
+        {/* Modal de Acciones Masivas (3 cubos isométricos) */}
+    <BatchLeadActionsModal
+      isOpen={isBatchModalOpen}
+      onClose={() => setIsBatchModalOpen(false)}
+      selectedLeadIds={selectedLeadIds}
+      availableTabs={sheetTabs}
+      activeTab={activeTab === '__ALL__' ? 'Expo M (JA)' : activeTab}
+      isDark={isDark}
+      onBatchUpdateStatus={async (leadIds, newStatus) => {
+        const updates = leadIds.map(id => ({ id, changes: { estadoCrm: newStatus } }));
+        await batchUpdateCloudLeads(updates);
+        setLocalEdits(prev => {
+          const next = { ...prev };
+          leadIds.forEach(id => {
+            next[id] = { ...(next[id] || {}), estadoCrm: newStatus };
+          });
+          return next;
+        });
+      }}
+      onBatchMoveToTab={async (leadIds, targetTab) => {
+        const updates = leadIds.map(id => ({ id, changes: { sheetTab: targetTab } }));
+        await batchUpdateCloudLeads(updates);
+        setLocalEdits(prev => {
+          const next = { ...prev };
+          leadIds.forEach(id => {
+            next[id] = { ...(next[id] || {}), sheetTab: targetTab };
+          });
+          return next;
+        });
+      }}
+      onCreateTabAndMove={async (leadIds, newTabName) => {
+        await addCloudTab(newTabName);
+        if (!sheetTabs.includes(newTabName)) {
+          setSheetTabs(prev => [...prev, newTabName]);
+        }
+        const updates = leadIds.map(id => ({ id, changes: { sheetTab: newTabName } }));
+        await batchUpdateCloudLeads(updates);
+        setLocalEdits(prev => {
+          const next = { ...prev };
+          leadIds.forEach(id => {
+            next[id] = { ...(next[id] || {}), sheetTab: newTabName };
+          });
+          return next;
+        });
+        setActiveTab(newTabName);
+      }}
+      onClearSelection={() => setSelectedLeadIds([])}
+    />
+
+    {/* Modal de Importación de Contactos (Google, Móvil, vCard / iOS) */}
+    <ImportContactsModal
+      isOpen={isImportModalOpen}
+      onClose={() => setIsImportModalOpen(false)}
+      availableTabs={sheetTabs}
+      activeTab={activeTab === '__ALL__' ? 'Expo M (JA)' : activeTab}
+      isDark={isDark}
+      onImportLeads={async (newLeads, targetTab) => {
+        const leadsToSave: LeadData[] = newLeads.map(l => ({
+          ...l,
+          sheetTab: targetTab,
+          tipoLead: 'cli',
+          assignedRep: userProfile?.assignedRepName || 'Jangel'
+        }));
+        await batchCreateCloudLeads(leadsToSave);
+        leadsToSave.forEach(l => {
+          onUpdateLead(l);
+        });
+      }}
+    />
+
+    {/* Botón Flotante Vitality para volver al Hub Central */}
+    <FloatingHubHomeButton
+      position="bottom-right"
+      style={{
+        bottom: 'max(46px, calc(env(safe-area-inset-bottom) + 40px))',
+        right: 'max(12px, env(safe-area-inset-right))'
+      }}
+    />
+
     <PortalModal
       isOpen={isPortalOpen}
       onClose={() => setIsPortalOpen(false)}

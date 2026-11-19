@@ -143,7 +143,7 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej. Ricfel Olaizola / Jose Angel Borges"
+                  placeholder="Ej. Ricfel / Jangel"
                   value={advisorName}
                   onChange={(e) => setAdvisorName(e.target.value)}
                   style={{
@@ -165,14 +165,14 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
                 <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => setAdvisorName('Ricfel Olaizola')}
+                    onClick={() => setAdvisorName('Ricfel')}
                     style={{
                       padding: '5px 12px',
                       borderRadius: '8px',
                       border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
-                      background: advisorName === 'Ricfel Olaizola' ? (isDark ? 'rgba(124, 58, 237, 0.25)' : '#F5F3FF') : (isDark ? '#1E293B' : '#F1F5F9'),
-                      color: advisorName === 'Ricfel Olaizola' ? (isDark ? '#C4B5FD' : '#7C3AED') : (isDark ? '#94A3B8' : '#475569'),
-                      fontSize: '0.76rem',
+                      background: advisorName === 'Ricfel' ? (isDark ? 'rgba(124, 58, 237, 0.25)' : '#F5F3FF') : (isDark ? '#1E293B' : '#F1F5F9'),
+                      color: advisorName === 'Ricfel' ? (isDark ? '#C4B5FD' : '#7C3AED') : (isDark ? '#94A3B8' : '#475569'),
+                      fontSize: '0.78rem',
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -185,18 +185,18 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
                       <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
                       <circle cx="12" cy="7" r="4"/>
                     </svg>
-                    <span>Ricfel Olaizola</span>
+                    <span>Ricfel</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAdvisorName('Jose Angel Borges')}
+                    onClick={() => setAdvisorName('Jangel')}
                     style={{
                       padding: '5px 12px',
                       borderRadius: '8px',
                       border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
-                      background: advisorName === 'Jose Angel Borges' ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#EFF6FF') : (isDark ? '#1E293B' : '#F1F5F9'),
-                      color: advisorName === 'Jose Angel Borges' ? (isDark ? '#93C5FD' : '#004D99') : (isDark ? '#94A3B8' : '#475569'),
-                      fontSize: '0.76rem',
+                      background: advisorName === 'Jangel' ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#EFF6FF') : (isDark ? '#1E293B' : '#F1F5F9'),
+                      color: advisorName === 'Jangel' ? (isDark ? '#93C5FD' : '#004D99') : (isDark ? '#94A3B8' : '#475569'),
+                      fontSize: '0.78rem',
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -209,7 +209,7 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
                       <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
                       <circle cx="12" cy="7" r="4"/>
                     </svg>
-                    <span>Jose Angel Borges</span>
+                    <span>Jangel</span>
                   </button>
                 </div>
               </div>

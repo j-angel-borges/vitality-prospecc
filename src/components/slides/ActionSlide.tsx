@@ -29,6 +29,7 @@ export function ActionSlide({ data, onUpdate, onSuccess }: ActionSlideProps) {
   // Logic to select the correct QR code mapping
   const getQrId = (name: string) => {
     switch(name) {
+      case "Jangel":
       case "Jose Angel": return "qr-jose-angel";
       case "Ricfel": return "qr-ricfel";
       case "Faviana": return "qr-faviana";

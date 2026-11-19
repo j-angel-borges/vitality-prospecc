@@ -113,12 +113,12 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
 
   const emailLower = (user.email || '').toLowerCase();
   const isUltraAdmin = emailLower === 'mipropiadinastia@gmail.com';
-  const isJoseAngel = emailLower.includes('jangelborges') || (customAdvisorName ? /jose|angel/i.test(customAdvisorName) : false);
+  const isJoseAngel = emailLower.includes('jangelborges') || (customAdvisorName ? /jangel|jose|angel/i.test(customAdvisorName) : false);
   const isRicfel = emailLower.includes('r.olaizola') || emailLower.includes('ricfel') || (customAdvisorName ? /ricfel/i.test(customAdvisorName) : false);
 
   const cleanCustom = (customAdvisorName || '').trim();
   let assignedRole: UserRole = 'sales_rep';
-  let assignedRep = 'Jose Angel';
+  let assignedRep = 'Jangel';
 
   if (isUltraAdmin) {
     assignedRole = 'ultra_admin';
@@ -128,7 +128,7 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
     assignedRep = 'Ricfel';
   } else if (isJoseAngel) {
     assignedRole = 'superadmin';
-    assignedRep = 'Jose Angel';
+    assignedRep = 'Jangel';
   } else {
     assignedRole = 'sales_rep';
     assignedRep = cleanCustom || user.displayName || 'Asesor Comercial';
@@ -148,7 +148,16 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
       profile.displayName = cleanCustom;
       updates.displayName = cleanCustom;
       needsUpdate = true;
+    } else if (isJoseAngel && profile.displayName !== 'Jangel') {
+      profile.displayName = 'Jangel';
+      updates.displayName = 'Jangel';
+      needsUpdate = true;
+    } else if (isRicfel && profile.displayName !== 'Ricfel') {
+      profile.displayName = 'Ricfel';
+      updates.displayName = 'Ricfel';
+      needsUpdate = true;
     }
+
     if (profile.assignedRepName !== assignedRep) {
       profile.assignedRepName = assignedRep;
       updates.assignedRepName = assignedRep;
@@ -167,7 +176,7 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
         ? cleanCustom 
         : (isUltraAdmin 
           ? 'Ultra Admin (Dinastía)' 
-          : (isJoseAngel ? 'José Angel (SuperAdmin)' : (isRicfel ? 'Ricfel (SuperAdmin)' : (user.displayName || 'Asesor Comercial')))),
+          : (isJoseAngel ? 'Jangel' : (isRicfel ? 'Ricfel' : (user.displayName || 'Asesor Comercial')))),
       photoURL: user.photoURL || undefined,
       role: assignedRole,
       assignedRepName: assignedRep,

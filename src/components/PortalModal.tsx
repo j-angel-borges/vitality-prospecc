@@ -42,7 +42,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
   // Transfer options state
   const [transferMode, setTransferMode] = useState<'tab' | 'individual'>('tab');
   const [transferAction, setTransferAction] = useState<'move' | 'copy'>('move');
-  const [transferFromRep, setTransferFromRep] = useState<string>('Jose Angel');
+  const [transferFromRep, setTransferFromRep] = useState<string>('Jangel');
   const [transferTab, setTransferTab] = useState<string>('__ALL_FROM_REP__');
   const [transferToRep, setTransferToRep] = useState<string>('Ricfel');
   const [targetTabName, setTargetTabName] = useState<string>('KEEP_CURRENT');
@@ -105,14 +105,15 @@ export const PortalModal: React.FC<PortalModalProps> = ({
       return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ricfel');
     }).length;
 
-    const joseAngelCount = leads.filter(l => {
+    const jangelCount = leads.filter(l => {
       const tab = l.sheetTab || '';
       return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ricfel');
     }).length;
 
     return {
       Ricfel: ricfelCount,
-      'Jose Angel': joseAngelCount,
+      Jangel: jangelCount,
+      'Jose Angel': jangelCount,
       ALL: leads.length
     };
   }, [leads]);
@@ -123,7 +124,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
       if (transferFromRep === 'Ricfel') {
         return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ricfel');
       }
-      if (transferFromRep === 'Jose Angel') {
+      if (transferFromRep === 'Jangel' || transferFromRep === 'Jose Angel') {
         return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ricfel');
       }
       return true;
@@ -485,7 +486,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                       SuperAdmin
                     </span>
                   </div>
-                  <h4 style={{ margin: '0 0 4px', fontSize: '0.96rem', fontWeight: 700 }}>Ricfel Olaizola</h4>
+                  <h4 style={{ margin: '0 0 4px', fontSize: '0.96rem', fontWeight: 700 }}>Ricfel</h4>
                   <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: isDark ? '#94A3B8' : '#64748B' }}>
                     r.olaizola@gmail.com
                   </p>
@@ -516,15 +517,15 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                   </button>
                 </div>
 
-                {/* Card Jose Angel (SuperAdmin) */}
+                {/* Card Jangel (SuperAdmin) */}
                 <div
                   style={{
                     padding: '16px',
                     borderRadius: '12px',
-                    background: selectedRep === 'Jose Angel'
+                    background: selectedRep === 'Jangel' || selectedRep === 'Jose Angel'
                       ? (isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF')
                       : (isDark ? '#1E293B' : '#F8FAFC'),
-                    border: selectedRep === 'Jose Angel'
+                    border: selectedRep === 'Jangel' || selectedRep === 'Jose Angel'
                       ? '2px solid #004D99'
                       : (isDark ? '1px solid #334155' : '1px solid #E2E8F0')
                   }}
@@ -549,18 +550,18 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                       SuperAdmin
                     </span>
                   </div>
-                  <h4 style={{ margin: '0 0 4px', fontSize: '0.96rem', fontWeight: 700 }}>José Angel Borges</h4>
+                  <h4 style={{ margin: '0 0 4px', fontSize: '0.96rem', fontWeight: 700 }}>Jangel</h4>
                   <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: isDark ? '#94A3B8' : '#64748B' }}>
                     jangelborges@gmail.com
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                     <span style={{ fontSize: '0.78rem', color: isDark ? '#94A3B8' : '#64748B' }}>Leads asignados:</span>
-                    <strong style={{ fontSize: '0.95rem', color: '#004D99' }}>{repCounts['Jose Angel']} leads</strong>
+                    <strong style={{ fontSize: '0.95rem', color: '#004D99' }}>{repCounts.Jangel || repCounts['Jose Angel']} leads</strong>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      onSelectRep('Jose Angel');
+                      onSelectRep('Jangel');
                       onSelectTab('Prospecc');
                       onClose();
                     }}
@@ -569,14 +570,14 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                       padding: '8px 12px',
                       borderRadius: '8px',
                       border: 'none',
-                      background: selectedRep === 'Jose Angel' ? '#004D99' : (isDark ? '#334155' : '#E2E8F0'),
-                      color: selectedRep === 'Jose Angel' ? '#FFFFFF' : (isDark ? '#F1F5F9' : '#334155'),
+                      background: selectedRep === 'Jangel' || selectedRep === 'Jose Angel' ? '#004D99' : (isDark ? '#334155' : '#E2E8F0'),
+                      color: selectedRep === 'Jangel' || selectedRep === 'Jose Angel' ? '#FFFFFF' : (isDark ? '#F1F5F9' : '#334155'),
                       fontWeight: 700,
                       fontSize: '0.8rem',
                       cursor: 'pointer'
                     }}
                   >
-                    {selectedRep === 'Jose Angel' ? '✓ Viendo sus leads' : 'Entrar a sus Leads'}
+                    {selectedRep === 'Jangel' || selectedRep === 'Jose Angel' ? '✓ Viendo sus leads' : 'Entrar a sus Leads'}
                   </button>
                 </div>
 
