@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/firebase/firebaseClient';
 import { CrmUserProfile, getUserProfile, logoutUser, handleRedirectAuth } from '@/services/authService';
@@ -19,10 +21,19 @@ interface SubAppBubble {
 }
 
 export const VitalityPanalLauncher: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<CrmUserProfile | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const router = useRouter();
+  const {
+    currentUser,
+    userProfile,
+    isAuthLoading,
+    loginWithGoogle,
+    logout,
+    isLoginModalOpen,
+    loginModalReason,
+    intendedDestination,
+    openLoginModal,
+    closeLoginModal
+  } = useAuth();
 
   // Smartwatch Clock
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -102,35 +113,13 @@ export const VitalityPanalLauncher: React.FC = () => {
     return () => cancelAnimationFrame(animId);
   }, [targetPos]);
 
-  // Check redirect auth (important for mobile Safari and Android login)
-  useEffect(() => {
-    handleRedirectAuth().then((res) => {
-      if (res) {
-        setCurrentUser(res.user);
-        setUserProfile(res.profile);
-      }
-    });
-  }, []);
-
-  // Listen to Auth
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setCurrentUser(u);
-      if (u) {
-        const p = await getUserProfile(u.uid, u.email);
-        setUserProfile(p);
-      } else {
-        setUserProfile(null);
-      }
-      setIsAuthLoading(false);
-    });
-    return () => unsub();
-  }, []);
-
-  const handleLogout = async () => {
-    await logoutUser();
-    setCurrentUser(null);
-    setUserProfile(null);
+  // Sub-app click gatekeeper: protect CRM and FormDemo if user is not authenticated
+  const handleSubAppClick = (e: React.MouseEvent, app: SubAppBubble) => {
+    const requiresAuth = app.id === 'crm' || app.id === 'formdemo';
+    if (requiresAuth && !currentUser) {
+      e.preventDefault();
+      openLoginModal(`Acceso a ${app.title}`, app.href);
+    }
   };
 
   // SubApps Definition with balanced mobile sizes & high-contrast clarity
@@ -251,7 +240,7 @@ export const VitalityPanalLauncher: React.FC = () => {
               </div>
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={logout}
                 className="ml-1 w-6 h-6 rounded-lg bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 flex items-center justify-center transition-colors shrink-0"
                 title="Cerrar sesión"
                 aria-label="Cerrar sesión"
@@ -264,7 +253,7 @@ export const VitalityPanalLauncher: React.FC = () => {
           ) : (
             <button
               type="button"
-              onClick={() => setIsLoginModalOpen(true)}
+              onClick={() => openLoginModal('Acceso Comercial', '/crm')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#002244] hover:bg-[#003366] text-white text-xs font-bold shadow-sm transition-all active:scale-95"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -309,6 +298,7 @@ export const VitalityPanalLauncher: React.FC = () => {
             <Link
               key={app.id}
               href={app.href}
+              onClick={(e) => handleSubAppClick(e, app)}
               className="group flex flex-col items-center focus:outline-none w-full"
               style={{ touchAction: 'manipulation' }}
             >
@@ -340,12 +330,13 @@ export const VitalityPanalLauncher: React.FC = () => {
       <LoginGatekeeperModal
         isOpen={isLoginModalOpen}
         isAuthLoading={isAuthLoading}
+        reasonTitle={loginModalReason}
+        onClose={closeLoginModal}
         onLoginWithGoogle={async (advisorName) => {
-          const { loginWithGoogle } = await import('@/services/authService');
-          const { user, profile } = await loginWithGoogle(advisorName);
-          setCurrentUser(user);
-          setUserProfile(profile);
-          setIsLoginModalOpen(false);
+          await loginWithGoogle(advisorName);
+          if (intendedDestination) {
+            router.push(intendedDestination);
+          }
         }}
         isDark={false}
       />

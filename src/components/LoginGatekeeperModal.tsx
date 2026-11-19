@@ -6,6 +6,8 @@ interface LoginGatekeeperModalProps {
   isOpen: boolean;
   isAuthLoading: boolean;
   onLoginWithGoogle: (advisorName?: string) => Promise<void>;
+  onClose?: () => void;
+  reasonTitle?: string;
   isDark?: boolean;
 }
 
@@ -13,6 +15,8 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
   isOpen,
   isAuthLoading,
   onLoginWithGoogle,
+  onClose,
+  reasonTitle,
   isDark = false
 }) => {
   const [advisorName, setAdvisorName] = useState<string>('');
@@ -79,6 +83,34 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
             position: 'relative'
           }}
         >
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                border: 'none',
+                background: 'rgba(255, 255, 255, 0.2)',
+                color: '#FFFFFF',
+                width: '30px',
+                height: '30px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: 700,
+                transition: 'all 0.15s ease'
+              }}
+              title="Cerrar"
+            >
+              ✕
+            </button>
+          )}
+
           <div
             style={{
               width: '56px',
@@ -101,7 +133,7 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
             />
           </div>
           <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-            VITALITY CRM
+            {reasonTitle || 'VITALITY CENTRAL'}
           </h2>
           <p style={{ margin: '6px 0 0', fontSize: '0.86rem', opacity: 0.9, fontWeight: 500 }}>
             Royal Prestige Distribution • Control Comercial

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
+import { AuthProvider } from '@/context/AuthContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PwaRegister } from '@/components/PwaRegister';
 
@@ -52,8 +53,10 @@ export default function RootLayout({
       <body className="font-body antialiased min-h-full h-full overscroll-none selection:bg-blue-600 selection:text-white">
         <ErrorBoundary fallbackTitle="Error en Vitality ERP">
           <FirebaseClientProvider>
-            <PwaRegister />
-            {children}
+            <AuthProvider>
+              <PwaRegister />
+              {children}
+            </AuthProvider>
           </FirebaseClientProvider>
         </ErrorBoundary>
       </body>

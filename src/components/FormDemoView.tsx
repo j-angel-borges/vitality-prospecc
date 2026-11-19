@@ -4,13 +4,14 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/firebase/firebaseClient';
-import { CrmUserProfile, getUserProfile, getAllCrmUsers, getStoredAccessToken } from '@/services/authService';
+import { CrmUserProfile, getAllCrmUsers, getStoredAccessToken } from '@/services/authService';
+import { useAuth } from '@/context/AuthContext';
+import { LoginGatekeeperModal } from '@/components/LoginGatekeeperModal';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { FloatingHubHomeButton } from '@/components/FloatingHubHomeButton';
 
 export const FormDemoView: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<CrmUserProfile | null>(null);
+  const { currentUser, userProfile, isAuthLoading, loginWithGoogle } = useAuth();
   const [crmUsers, setCrmUsers] = useState<CrmUserProfile[]>([]);
 
   // Form Fields
@@ -32,23 +33,19 @@ export const FormDemoView: React.FC = () => {
   const [agendadoExitoso, setAgendadoExitoso] = useState<boolean>(false);
   const [copiedMsg, setCopiedMsg] = useState<boolean>(false);
 
-  // Load auth & users
+  // Sincronizar asesor activo con perfil de Auth
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setCurrentUser(u);
-      if (u) {
-        const p = await getUserProfile(u.uid, u.email);
-        setUserProfile(p);
-        if (p?.assignedRepName) {
-          setAsesor(p.assignedRepName);
-        } else if (p?.displayName) {
-          setAsesor(p.displayName);
-        }
+    if (userProfile) {
+      if (userProfile.assignedRepName) {
+        setAsesor(userProfile.assignedRepName);
+      } else if (userProfile.displayName) {
+        setAsesor(userProfile.displayName);
       }
-    });
+    }
+  }, [userProfile]);
 
+  useEffect(() => {
     getAllCrmUsers().then(users => setCrmUsers(users));
-    return () => unsub();
   }, []);
 
   // Duration in hours/minutes

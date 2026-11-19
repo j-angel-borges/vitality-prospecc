@@ -6,9 +6,10 @@ import { LeadData } from '@/data/leadTypes';
 interface BatchLeadActionsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedLeadIds: string[];
-  leads: LeadData[];
-  sheetTabs: string[];
+  selectedLeadIds?: string[];
+  leads?: LeadData[];
+  sheetTabs?: string[];
+  availableTabs?: string[];
   onBatchUpdateStatus: (newStatus: LeadData['estadoCrm']) => Promise<void>;
   onBatchMoveToTab: (targetTab: string) => Promise<void>;
   onBatchCreateTabAndMove: (newTabName: string) => Promise<void>;
@@ -19,19 +20,21 @@ interface BatchLeadActionsModalProps {
 export const BatchLeadActionsModal: React.FC<BatchLeadActionsModalProps> = ({
   isOpen,
   onClose,
-  selectedLeadIds,
-  leads,
-  sheetTabs,
+  selectedLeadIds = [],
+  leads = [],
+  sheetTabs = [],
+  availableTabs = [],
   onBatchUpdateStatus,
   onBatchMoveToTab,
   onBatchCreateTabAndMove,
   onClearSelection,
   isDark = false
 }) => {
+  const tabsList = (sheetTabs && sheetTabs.length > 0) ? sheetTabs : ((availableTabs && availableTabs.length > 0) ? availableTabs : ['Prospecc']);
   const [activeTab, setActiveTab] = useState<'stage' | 'new_tab' | 'existing_tab'>('stage');
   const [selectedStage, setSelectedStage] = useState<LeadData['estadoCrm']>('contactado');
   const [newTabName, setNewTabName] = useState<string>('');
-  const [targetTab, setTargetTab] = useState<string>(sheetTabs[0] || 'Prospecc');
+  const [targetTab, setTargetTab] = useState<string>(tabsList[0] || 'Prospecc');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
@@ -452,7 +455,7 @@ export const BatchLeadActionsModal: React.FC<BatchLeadActionsModalProps> = ({
                       boxSizing: 'border-box'
                     }}
                   >
-                    {sheetTabs.map((t) => (
+                    {tabsList.map((t) => (
                       <option key={t} value={t}>
                         {t}
                       </option>

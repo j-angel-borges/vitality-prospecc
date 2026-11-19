@@ -8,8 +8,10 @@ import { GoogleContact, fetchGoogleContacts, getCachedContacts, normalizePhone }
 interface ImportContactsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentTab: string;
-  sheetTabs: string[];
+  currentTab?: string;
+  activeTab?: string;
+  sheetTabs?: string[];
+  availableTabs?: string[];
   onImportLeads: (leadsToImport: LeadData[]) => Promise<void>;
   isDark?: boolean;
 }
@@ -18,12 +20,16 @@ export const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
   isOpen,
   onClose,
   currentTab,
-  sheetTabs,
+  activeTab,
+  sheetTabs = [],
+  availableTabs = [],
   onImportLeads,
   isDark = false
 }) => {
+  const tabsList = (sheetTabs && sheetTabs.length > 0) ? sheetTabs : ((availableTabs && availableTabs.length > 0) ? availableTabs : ['Prospecc']);
+  const initialTab = currentTab || activeTab || tabsList[0] || 'Prospecc';
   const [activeChannel, setActiveChannel] = useState<'google' | 'phone_native' | 'iphone_file'>('google');
-  const [targetTab, setTargetTab] = useState<string>(currentTab === '__ALL__' ? 'Prospecc' : currentTab);
+  const [targetTab, setTargetTab] = useState<string>(initialTab === '__ALL__' ? (tabsList[0] || 'Prospecc') : initialTab);
 
   // Google Contacts State
   const [googleContacts, setGoogleContacts] = useState<GoogleContact[]>(() => getCachedContacts());
@@ -52,7 +58,7 @@ export const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setTargetTab(currentTab === '__ALL__' ? (sheetTabs[0] || 'Prospecc') : currentTab);
+      setTargetTab(currentTab === '__ALL__' ? (tabsList[0] || 'Prospecc') : (currentTab || tabsList[0] || 'Prospecc'));
       const cached = getCachedContacts();
       if (cached.length > 0) {
         setGoogleContacts(cached);
@@ -434,7 +440,7 @@ export const ImportContactsModal: React.FC<ImportContactsModalProps> = ({
               cursor: 'pointer'
             }}
           >
-            {sheetTabs.map((t) => (
+            {tabsList.map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>

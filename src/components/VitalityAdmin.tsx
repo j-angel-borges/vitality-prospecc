@@ -26,6 +26,7 @@ import { LoginGatekeeperModal } from './LoginGatekeeperModal';
 import { BatchLeadActionsModal } from './BatchLeadActionsModal';
 import { ImportContactsModal } from './ImportContactsModal';
 import { FloatingHubHomeButton } from './FloatingHubHomeButton';
+import { useAuth } from '@/context/AuthContext';
 
 import {
   CrmUserProfile,
@@ -1342,51 +1343,41 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   const [expandAllTexts, setExpandAllTexts] = useState<boolean>(false);
   const [isColMenuOpen, setIsColMenuOpen] = useState<boolean>(false);
 
-  // ── Auth & Google Contacts Sync States ────────────────────────────────────
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<CrmUserProfile | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
+  // ── Auth & Google Contacts Sync States (Global Auth Context) ──────────────
+  const {
+    currentUser,
+    userProfile,
+    isAuthLoading,
+    loginWithGoogle: authLogin,
+    logout: authLogout
+  } = useAuth();
   const [contactsMap, setContactsMap] = useState<Map<string, GoogleContact>>(() => {
     return createContactsMap(getCachedContacts());
   });
   const [isSyncingContacts, setIsSyncingContacts] = useState<boolean>(false);
   const [onlyUnsavedContacts, setOnlyUnsavedContacts] = useState<boolean>(false);
 
-  // Listener de Firebase Auth & Perfil
+  // Sincronizar roles y asignación desde el perfil de Auth Global
   useEffect(() => {
-    handleRedirectAuth().catch(() => {});
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setCurrentUser(u);
-      if (u) {
-        const p = await getUserProfile(u.uid, u.email);
-        setUserProfile(p);
-        // RBAC Estricto:
-        // UltraAdmin (mipropiadinastia) ve ALL y gestiona todo
-        // Superadmins: jangelborges -> Jose Angel, r.olaizola -> Ricfel
-        if (p?.role === 'ultra_admin') {
-          setSelectedRep('ALL');
-        } else if (p?.assignedRepName === 'Ricfel') {
-          setSelectedRep('Ricfel');
-          setActiveTab('Mod Avcn (R)');
-        } else if (p?.assignedRepName === 'Jose Angel') {
-          setSelectedRep('Jose Angel');
-          setActiveTab('Prospecc');
-        } else if (p?.assignedRepName) {
-          setSelectedRep(p.assignedRepName as AdminRep);
-          setActiveTab('Prospecc');
-        }
-        // Intentar sincronizar contactos si hay token disponible
-        const token = getStoredAccessToken();
-        if (token) {
-          handleSyncContacts(token, false);
-        }
-      } else {
-        setUserProfile(null);
+    if (userProfile) {
+      if (userProfile.role === 'ultra_admin') {
+        setSelectedRep('ALL');
+      } else if (userProfile.assignedRepName === 'Ricfel') {
+        setSelectedRep('Ricfel');
+        setActiveTab('Mod Avcn (R)');
+      } else if (userProfile.assignedRepName === 'Jangel' || userProfile.assignedRepName === 'Jose Angel') {
+        setSelectedRep('Jangel');
+        setActiveTab('Prospecc');
+      } else if (userProfile.assignedRepName) {
+        setSelectedRep(userProfile.assignedRepName as AdminRep);
+        setActiveTab('Prospecc');
       }
-      setIsAuthLoading(false);
-    });
-    return () => unsub();
-  }, []);
+      const token = getStoredAccessToken();
+      if (token) {
+        handleSyncContacts(token, false);
+      }
+    }
+  }, [userProfile]);
 
   // Función para sincronizar contactos de Google y actualizar nombres en CRM
   const handleSyncContacts = async (token?: string, userInitiated = true) => {
@@ -4319,46 +4310,47 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     </div>
 
     {/* Modal de Portal Administrativo (Roles & Traspasos) */}
-        {/* Modal de Acciones Masivas (3 cubos isométricos) */}
+    {/* Modal de Acciones Masivas (3 cubos isométricos) */}
     <BatchLeadActionsModal
       isOpen={isBatchModalOpen}
       onClose={() => setIsBatchModalOpen(false)}
       selectedLeadIds={selectedLeadIds}
+      leads={leads}
+      sheetTabs={sheetTabs}
       availableTabs={sheetTabs}
-      activeTab={activeTab === '__ALL__' ? 'Expo M (JA)' : activeTab}
       isDark={isDark}
-      onBatchUpdateStatus={async (leadIds, newStatus) => {
-        const updates = leadIds.map(id => ({ id, changes: { estadoCrm: newStatus } }));
+      onBatchUpdateStatus={async (newStatus) => {
+        const updates = selectedLeadIds.map(id => ({ id, changes: { estadoCrm: newStatus } }));
         await batchUpdateCloudLeads(updates);
         setLocalEdits(prev => {
           const next = { ...prev };
-          leadIds.forEach(id => {
+          selectedLeadIds.forEach(id => {
             next[id] = { ...(next[id] || {}), estadoCrm: newStatus };
           });
           return next;
         });
       }}
-      onBatchMoveToTab={async (leadIds, targetTab) => {
-        const updates = leadIds.map(id => ({ id, changes: { sheetTab: targetTab } }));
+      onBatchMoveToTab={async (targetTab) => {
+        const updates = selectedLeadIds.map(id => ({ id, changes: { sheetTab: targetTab } }));
         await batchUpdateCloudLeads(updates);
         setLocalEdits(prev => {
           const next = { ...prev };
-          leadIds.forEach(id => {
+          selectedLeadIds.forEach(id => {
             next[id] = { ...(next[id] || {}), sheetTab: targetTab };
           });
           return next;
         });
       }}
-      onCreateTabAndMove={async (leadIds, newTabName) => {
+      onBatchCreateTabAndMove={async (newTabName) => {
         await addCloudTab(newTabName);
         if (!sheetTabs.includes(newTabName)) {
           setSheetTabs(prev => [...prev, newTabName]);
         }
-        const updates = leadIds.map(id => ({ id, changes: { sheetTab: newTabName } }));
+        const updates = selectedLeadIds.map(id => ({ id, changes: { sheetTab: newTabName } }));
         await batchUpdateCloudLeads(updates);
         setLocalEdits(prev => {
           const next = { ...prev };
-          leadIds.forEach(id => {
+          selectedLeadIds.forEach(id => {
             next[id] = { ...(next[id] || {}), sheetTab: newTabName };
           });
           return next;
@@ -4372,10 +4364,12 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     <ImportContactsModal
       isOpen={isImportModalOpen}
       onClose={() => setIsImportModalOpen(false)}
+      currentTab={activeTab === '__ALL__' ? 'Expo M (JA)' : activeTab}
+      sheetTabs={sheetTabs}
       availableTabs={sheetTabs}
-      activeTab={activeTab === '__ALL__' ? 'Expo M (JA)' : activeTab}
       isDark={isDark}
-      onImportLeads={async (newLeads, targetTab) => {
+      onImportLeads={async (newLeads) => {
+        const targetTab = activeTab === '__ALL__' ? 'Expo M (JA)' : activeTab;
         const leadsToSave: LeadData[] = newLeads.map(l => ({
           ...l,
           sheetTab: targetTab,
