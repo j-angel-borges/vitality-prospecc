@@ -51,7 +51,6 @@ export const FormDemoView: React.FC = () => {
   }, []);
 
   // Duration in hours/minutes
-  const duracionTexto = tipoCita === 'demo' ? '2h 30m' : '30 min';
   const duracionMinutos = tipoCita === 'demo' ? 150 : 30;
 
   // Sound generator using Web Audio API
@@ -67,7 +66,7 @@ export const FormDemoView: React.FC = () => {
       const gain = ctx.createGain();
 
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, ctx.currentTime);
+      osc1.frequency.setValueAtTime(880, ctx.currentTime); // 880 Hz
       osc1.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.15);
 
       osc2.type = 'triangle';
@@ -185,13 +184,13 @@ export const FormDemoView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-slate-950 text-slate-100 flex flex-col overflow-x-hidden">
-      {/* Top Bar with Safe-Area Clearance for iOS & Android */}
-      <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 py-3 sm:py-4 pt-[max(0.75rem,env(safe-area-inset-top))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] flex items-center justify-between sticky top-0 z-40">
+    <div className="min-h-[100dvh] w-full bg-[#F8FAFC] text-slate-800 flex flex-col overflow-x-hidden">
+      {/* Top Bar with Safe-Area Clearance for iOS & Android (Light Header) */}
+      <header className="border-b border-slate-200/90 bg-white/80 backdrop-blur-md px-4 sm:px-6 py-3.5 sm:py-4 pt-[max(0.75rem,env(safe-area-inset-top))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] flex items-center justify-between sticky top-0 z-40 shadow-xs">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <Link
             href="/"
-            className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors shrink-0 active:scale-95"
+            className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors shrink-0 active:scale-95"
             title="Volver al Hub"
             aria-label="Volver al Hub"
           >
@@ -201,11 +200,8 @@ export const FormDemoView: React.FC = () => {
           </Link>
           <div className="flex items-center gap-2 min-w-0">
             <img src="/vitality_symbol.png" alt="Vitality" className="w-6 h-6 sm:w-7 sm:h-7 object-contain shrink-0" />
-            <h1 className="text-sm sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5 truncate">
-              <span>Gestión de Citas</span>
-              <span className="hidden xs:inline text-[9px] sm:text-[10px] font-extrabold uppercase px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-                ERP
-              </span>
+            <h1 className="text-sm sm:text-base font-extrabold tracking-tight text-[#002244] truncate">
+              Gestión de Citas
             </h1>
           </div>
         </div>
@@ -213,7 +209,7 @@ export const FormDemoView: React.FC = () => {
         <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/crm"
-            className="w-9 h-9 rounded-xl bg-blue-900/40 text-blue-300 hover:bg-blue-900/60 border border-blue-500/30 transition-all flex items-center justify-center active:scale-95"
+            className="w-9 h-9 rounded-xl bg-blue-50 text-[#004D99] hover:bg-blue-100 border border-blue-200/80 transition-all flex items-center justify-center active:scale-95"
             title="Ir al CRM"
             aria-label="Ir al CRM"
           >
@@ -225,61 +221,51 @@ export const FormDemoView: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Content Area (Clean White Card) */}
       <main className="flex-1 max-w-2xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-8 shadow-2xl relative overflow-hidden">
-          {/* Subtle Ambient Glow */}
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-8 shadow-sm relative overflow-hidden">
+          {/* Subtle Light Ambient Glow */}
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-100/50 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-amber-100/40 rounded-full blur-3xl pointer-events-none" />
 
           {/* Form Header */}
-          <div className="mb-5">
-            <h2 className="text-base sm:text-xl font-extrabold text-white tracking-tight">
+          <div className="mb-5 text-center sm:text-left">
+            <h2 className="text-base sm:text-xl font-extrabold text-[#002244] tracking-tight">
               Registrar Nueva Cita de Llamada
             </h2>
           </div>
 
           <form onSubmit={handleAgendar} className="space-y-4 sm:space-y-5">
-            {/* Tipo de Cita Selector */}
+            {/* Tipo de Cita Selector (Clean without 2h30m / 30min badges as requested) */}
             <div>
-              <label className="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+              <label className="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
                 Tipo de Cita
               </label>
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setTipoCita('demo')}
                   style={{ touchAction: 'manipulation' }}
-                  className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all ${
+                  className={`p-3.5 rounded-xl border text-center transition-all ${
                     tipoCita === 'demo'
-                      ? 'border-blue-500 bg-blue-600/15 ring-2 ring-blue-500/30 text-white'
-                      : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                      ? 'border-blue-600 bg-blue-50/80 ring-2 ring-blue-500/25 text-[#002244] font-bold shadow-xs'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 font-semibold'
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                    <span className="text-xs sm:text-sm font-bold text-blue-400">Demostración (Demo)</span>
-                    <span className="self-start sm:self-auto text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300">
-                      2h 30m
-                    </span>
-                  </div>
+                  <span className="text-sm">Demostración (Demo)</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setTipoCita('socio')}
                   style={{ touchAction: 'manipulation' }}
-                  className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all ${
+                  className={`p-3.5 rounded-xl border text-center transition-all ${
                     tipoCita === 'socio'
-                      ? 'border-amber-500 bg-amber-600/15 ring-2 ring-amber-500/30 text-white'
-                      : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                      ? 'border-amber-500 bg-amber-50/80 ring-2 ring-amber-500/25 text-amber-950 font-bold shadow-xs'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 font-semibold'
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                    <span className="text-xs sm:text-sm font-bold text-amber-400">Reunión de Socio</span>
-                    <span className="self-start sm:self-auto text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
-                      30 min
-                    </span>
-                  </div>
+                  <span className="text-sm">Reunión de Socio</span>
                 </button>
               </div>
             </div>
@@ -287,13 +273,13 @@ export const FormDemoView: React.FC = () => {
             {/* Asesor y Cliente */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               <div>
-                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1">
                   Asesor / Ejecutivo
                 </label>
                 <select
                   value={asesor}
                   onChange={(e) => setAsesor(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
                 >
                   <option value="Ricfel Olaizola">Ricfel Olaizola (SuperAdmin)</option>
                   <option value="Jose Angel Borges">José Angel Borges (SuperAdmin)</option>
@@ -308,7 +294,7 @@ export const FormDemoView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1">
                   {tipoCita === 'demo' ? 'Nombre del Cliente' : 'Nombre del Socio'} *
                 </label>
                 <input
@@ -317,7 +303,7 @@ export const FormDemoView: React.FC = () => {
                   placeholder="Ej. Rocio Giraldo / Cezar Calderon"
                   value={cliente}
                   onChange={(e) => setCliente(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
                 />
               </div>
             </div>
@@ -325,7 +311,7 @@ export const FormDemoView: React.FC = () => {
             {/* Celular y Dirección */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               <div>
-                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1">
                   Teléfono Celular / WhatsApp
                 </label>
                 <input
@@ -333,12 +319,12 @@ export const FormDemoView: React.FC = () => {
                   placeholder="Ej. 992963045"
                   value={celular}
                   onChange={(e) => setCelular(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1">
                   Dirección y Referencia
                 </label>
                 <input
@@ -346,15 +332,15 @@ export const FormDemoView: React.FC = () => {
                   placeholder="Ej. Jr Raymundo Carcamo 1000 Sta Catalina"
                   value={direccion}
                   onChange={(e) => setDireccion(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
                 />
               </div>
             </div>
 
-            {/* Fecha y Hora Integradas con dark colorScheme nativo en Android e iOS */}
+            {/* Fecha y Hora Integradas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               <div>
-                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1">
                   Fecha de la Cita
                 </label>
                 <input
@@ -362,29 +348,27 @@ export const FormDemoView: React.FC = () => {
                   required
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
-                  style={{ colorScheme: 'dark' }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
-                  Hora de Inicio ({duracionTexto})
+                <label className="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1">
+                  Hora de Inicio
                 </label>
                 <input
                   type="time"
                   required
                   value={hora}
                   onChange={(e) => setHora(e.target.value)}
-                  style={{ colorScheme: 'dark' }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[44px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
                 />
               </div>
             </div>
 
             {/* Observaciones */}
             <div>
-              <label className="block text-[11px] sm:text-xs font-bold text-slate-300 mb-1">
+              <label className="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1">
                 Observaciones y Notas
               </label>
               <textarea
@@ -392,18 +376,18 @@ export const FormDemoView: React.FC = () => {
                 placeholder="Notas de la llamada, productos de interés..."
                 value={observaciones}
                 onChange={(e) => setObservaciones(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none"
               />
             </div>
 
-            {/* Actions Bar: Pure SVGs as requested with minimum 48px touch targets */}
+            {/* Actions Bar: Pure SVGs with High Contrast */}
             <div className="pt-2 flex items-center justify-center gap-4">
               {/* Submit Agendar Button: Pure SVG */}
               <button
                 type="submit"
                 disabled={isSubmitting}
                 style={{ touchAction: 'manipulation' }}
-                className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-900/30 transition-all active:scale-95 disabled:opacity-50"
+                className="w-14 h-14 rounded-2xl bg-gradient-to-r from-[#002244] to-[#004D99] hover:from-[#001833] hover:to-[#003d7a] text-white flex items-center justify-center shadow-md shadow-blue-950/20 transition-all active:scale-95 disabled:opacity-50"
                 title="Agendar Cita en Calendario"
                 aria-label="Agendar Cita en Calendario"
               >
@@ -427,8 +411,8 @@ export const FormDemoView: React.FC = () => {
                 style={{ touchAction: 'manipulation' }}
                 className={`w-14 h-14 rounded-2xl border transition-all flex items-center justify-center active:scale-95 ${
                   agendadoExitoso || copiedMsg
-                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-lg shadow-amber-500/20 animate-pulse'
-                    : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    ? 'bg-amber-50 border-amber-400 text-amber-700 shadow-md shadow-amber-500/15 animate-pulse'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs'
                 }`}
                 title="Sonar campana y copiar formato para WhatsApp"
                 aria-label="Sonar campana y copiar formato para WhatsApp"
@@ -453,25 +437,25 @@ export const FormDemoView: React.FC = () => {
 
           {/* Feedback Toast */}
           {copiedMsg && (
-            <div className="mt-4 p-3 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs text-center font-bold animate-in fade-in">
+            <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs text-center font-bold animate-in fade-in">
               ¡Formato copiado al portapapeles para WhatsApp!
             </div>
           )}
 
           {/* Success Box */}
           {agendadoExitoso && !copiedMsg && (
-            <div className="mt-4 p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between gap-2">
+            <div className="mt-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold shrink-0">
                   ✓
                 </div>
-                <span className="font-bold text-emerald-300 truncate">¡Cita agendada exitosamente!</span>
+                <span className="font-bold truncate">¡Cita agendada exitosamente!</span>
               </div>
               <button
                 type="button"
                 onClick={handleBellClick}
                 style={{ touchAction: 'manipulation' }}
-                className="w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-colors flex items-center justify-center shrink-0 active:scale-95"
+                className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-colors flex items-center justify-center shrink-0 active:scale-95 shadow-xs"
                 title="Copiar para WhatsApp"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

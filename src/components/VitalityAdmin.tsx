@@ -29,7 +29,8 @@ import {
   logoutUser,
   getUserProfile,
   getStoredAccessToken,
-  setStoredAccessToken
+  setStoredAccessToken,
+  handleRedirectAuth
 } from '@/services/authService';
 import {
   GoogleContact,
@@ -1325,6 +1326,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
 
   // Listener de Firebase Auth & Perfil
   useEffect(() => {
+    handleRedirectAuth().catch(() => {});
     const unsub = onAuthStateChanged(auth, async (u) => {
       setCurrentUser(u);
       if (u) {

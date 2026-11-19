@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/firebase/firebaseClient';
-import { CrmUserProfile, getUserProfile, logoutUser } from '@/services/authService';
+import { CrmUserProfile, getUserProfile, logoutUser, handleRedirectAuth } from '@/services/authService';
 import { LoginGatekeeperModal } from '@/components/LoginGatekeeperModal';
 
 interface SubAppBubble {
@@ -82,7 +82,6 @@ export const VitalityPanalLauncher: React.FC = () => {
         let tx = targetPos.x;
         let ty = targetPos.y;
 
-        // Subtle ambient organic breathing when idle (useful on mobile phones resting on table)
         if (isIdle) {
           tx += Math.sin(t) * 35;
           ty += Math.cos(t * 0.8) * 30;
@@ -102,6 +101,16 @@ export const VitalityPanalLauncher: React.FC = () => {
     animId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animId);
   }, [targetPos]);
+
+  // Check redirect auth (important for mobile Safari and Android login)
+  useEffect(() => {
+    handleRedirectAuth().then((res) => {
+      if (res) {
+        setCurrentUser(res.user);
+        setUserProfile(res.profile);
+      }
+    });
+  }, []);
 
   // Listen to Auth
   useEffect(() => {
@@ -124,18 +133,18 @@ export const VitalityPanalLauncher: React.FC = () => {
     setUserProfile(null);
   };
 
-  // SubApps Definition matching requested modules
+  // SubApps Definition with balanced mobile sizes & high-contrast clarity
   const subApps: SubAppBubble[] = [
     {
       id: 'crm',
       title: 'CRM',
-      subtitle: 'Leads & Clientes',
+      subtitle: 'Clientes & Leads',
       href: '/crm',
       badge: 'Principal',
       bgGradient: 'linear-gradient(135deg, #002244 0%, #004D99 100%)',
       shadowColor: 'rgba(0, 77, 153, 0.35)',
       iconSvg: (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#93C5FD" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 sm:w-8 sm:h-8">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#93C5FD" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 sm:w-6 sm:h-6">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <path d="M3 9h18M9 21V9"/>
         </svg>
@@ -150,7 +159,7 @@ export const VitalityPanalLauncher: React.FC = () => {
       bgGradient: 'linear-gradient(135deg, #78350F 0%, #D97706 100%)',
       shadowColor: 'rgba(217, 119, 6, 0.35)',
       iconSvg: (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FDE68A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 sm:w-8 sm:h-8">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FDE68A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 sm:w-6 sm:h-6">
           <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
           <line x1="3" y1="6" x2="21" y2="6"/>
           <path d="M16 10a4 4 0 0 1-8 0"/>
@@ -160,13 +169,13 @@ export const VitalityPanalLauncher: React.FC = () => {
     {
       id: 'prospecc',
       title: 'Prospecc',
-      subtitle: 'Captación',
+      subtitle: 'Encuesta Salud',
       href: '/prospecc',
       badge: 'Embudo',
       bgGradient: 'linear-gradient(135deg, #064E3B 0%, #059669 100%)',
       shadowColor: 'rgba(5, 150, 105, 0.35)',
       iconSvg: (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#A7F3D0" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 sm:w-8 sm:h-8">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#A7F3D0" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 sm:w-6 sm:h-6">
           <circle cx="12" cy="12" r="10"/>
           <circle cx="12" cy="12" r="6"/>
           <circle cx="12" cy="12" r="2"/>
@@ -175,14 +184,14 @@ export const VitalityPanalLauncher: React.FC = () => {
     },
     {
       id: 'formdemo',
-      title: 'FormDemo',
-      subtitle: 'Gestión Citas',
+      title: 'Citas',
+      subtitle: 'Gestión Agenda',
       href: '/formdemo',
       badge: 'Citas',
       bgGradient: 'linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%)',
       shadowColor: 'rgba(124, 58, 237, 0.35)',
       iconSvg: (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#DDD6FE" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 sm:w-8 sm:h-8">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#DDD6FE" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 sm:w-6 sm:h-6">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
           <line x1="16" y1="2" x2="16" y2="6"/>
           <line x1="8" y1="2" x2="8" y2="6"/>
@@ -199,58 +208,55 @@ export const VitalityPanalLauncher: React.FC = () => {
       <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 0 }}>
         {/* Main navy organic fluid blob following mouse/touch */}
         <div
-          className="absolute w-[360px] h-[360px] sm:w-[520px] sm:h-[520px] rounded-full blur-[70px] sm:blur-[90px] opacity-25"
+          className="absolute w-[340px] h-[340px] sm:w-[480px] sm:h-[480px] rounded-full blur-[60px] sm:blur-[85px] opacity-25"
           style={{
-            transform: `translate3d(${smoothPos.x - 180}px, ${smoothPos.y - 180}px, 0)`,
+            transform: `translate3d(${smoothPos.x - 170}px, ${smoothPos.y - 170}px, 0)`,
             background: 'radial-gradient(circle, #002244 0%, #0B2545 45%, #004D99 75%, transparent 100%)',
             willChange: 'transform',
           }}
         />
         {/* Secondary organic fluid blob trailing */}
         <div
-          className="absolute w-[280px] h-[280px] sm:w-[420px] sm:h-[420px] rounded-full blur-[80px] sm:blur-[100px] opacity-20"
+          className="absolute w-[260px] h-[260px] sm:w-[380px] sm:h-[380px] rounded-full blur-[70px] sm:blur-[95px] opacity-20"
           style={{
-            transform: `translate3d(${smoothPos.x * 0.85 - 140}px, ${smoothPos.y * 0.85 - 140}px, 0)`,
+            transform: `translate3d(${smoothPos.x * 0.85 - 130}px, ${smoothPos.y * 0.85 - 130}px, 0)`,
             background: 'radial-gradient(circle, #1E3A8A 0%, #002244 55%, transparent 100%)',
             willChange: 'transform',
           }}
         />
-        {/* Ambient subtle light accents */}
-        <div className="absolute -top-32 -left-32 w-72 sm:w-96 h-72 sm:h-96 bg-blue-200/40 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-72 sm:w-96 h-72 sm:h-96 bg-indigo-200/40 rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* Frosted glass translucent wash */}
-      <div className="absolute inset-0 bg-white/60 backdrop-blur-[35px] sm:backdrop-blur-[45px] pointer-events-none" style={{ zIndex: 1 }} />
+      <div className="absolute inset-0 bg-white/65 backdrop-blur-[35px] sm:backdrop-blur-[45px] pointer-events-none" style={{ zIndex: 1 }} />
 
       {/* Top Bar: Smartwatch User Profile (Top-Left) & Logo (Top-Right) */}
-      <header className="relative z-20 px-4 sm:px-6 py-3.5 sm:py-6 pt-[max(0.85rem,env(safe-area-inset-top))] pl-[max(0.85rem,env(safe-area-inset-left))] pr-[max(0.85rem,env(safe-area-inset-right))] flex items-center justify-between gap-2">
-        {/* User Profile Pill (Smartwatch Style in Top-Left) */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      <header className="relative z-20 px-4 sm:px-6 py-3 sm:py-5 pt-[max(0.85rem,env(safe-area-inset-top))] pl-[max(0.85rem,env(safe-area-inset-left))] pr-[max(0.85rem,env(safe-area-inset-right))] flex items-center justify-between gap-2">
+        {/* User Profile Pill */}
+        <div className="flex items-center gap-2 min-w-0">
           {currentUser ? (
-            <div className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl bg-white/80 border border-slate-200/90 backdrop-blur-md shadow-sm max-w-[200px] sm:max-w-none">
+            <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-2xl bg-white/80 border border-slate-200/90 backdrop-blur-md shadow-xs max-w-[210px] sm:max-w-none">
               <div className="relative shrink-0">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-[#002244] to-[#004D99] flex items-center justify-center font-extrabold text-white text-xs sm:text-sm shadow-sm">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-[#002244] to-[#004D99] flex items-center justify-center font-extrabold text-white text-xs shadow-xs">
                   {(userProfile?.displayName || currentUser.displayName || currentUser.email || 'A').charAt(0).toUpperCase()}
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-500 rounded-full ring-2 ring-white" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-slate-800 leading-tight truncate max-w-[90px] sm:max-w-none">
-                  {userProfile?.displayName || currentUser.displayName || 'Asesor Comercial'}
+                <span className="text-[11px] sm:text-xs font-bold text-slate-800 leading-tight truncate max-w-[95px] sm:max-w-none">
+                  {userProfile?.displayName || currentUser.displayName || 'Asesor'}
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-semibold text-blue-700">
+                <span className="text-[9px] font-semibold text-blue-700">
                   {userProfile?.role === 'ultra_admin' ? 'UltraAdmin' : (userProfile?.role === 'superadmin' ? 'SuperAdmin' : 'Asesor')}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="ml-1 sm:ml-2 w-7 h-7 rounded-lg bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 flex items-center justify-center transition-colors shrink-0"
+                className="ml-1 w-6 h-6 rounded-lg bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 flex items-center justify-center transition-colors shrink-0"
                 title="Cerrar sesión"
                 aria-label="Cerrar sesión"
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
                 </svg>
               </button>
@@ -259,9 +265,9 @@ export const VitalityPanalLauncher: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsLoginModalOpen(true)}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl bg-[#002244] hover:bg-[#003366] text-white text-xs font-bold shadow-md shadow-blue-950/15 transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#002244] hover:bg-[#003366] text-white text-xs font-bold shadow-sm transition-all active:scale-95"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
               </svg>
               <span>Acceso Comercial</span>
@@ -269,99 +275,64 @@ export const VitalityPanalLauncher: React.FC = () => {
           )}
         </div>
 
-        {/* Brand Symbol (Top-Right) */}
+        {/* Brand Symbol */}
         <div className="flex items-center gap-2 shrink-0">
-          <img src="/vitality_symbol.png" alt="Vitality" className="w-8 h-8 sm:w-9 sm:h-9 object-contain drop-shadow-sm" />
+          <img src="/vitality_symbol.png" alt="Vitality" className="w-7 h-7 sm:w-8 sm:h-8 object-contain drop-shadow-xs" />
           <div className="hidden xs:flex flex-col text-right">
-            <span className="text-[11px] sm:text-xs font-extrabold tracking-wider text-[#002244] uppercase">Vitality ERP</span>
-            <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium">Royal Prestige</span>
+            <span className="text-[11px] sm:text-xs font-black tracking-wider text-[#002244] uppercase">Vitality ERP</span>
+            <span className="text-[9px] text-slate-500 font-medium">Royal Prestige</span>
           </div>
         </div>
       </header>
 
-      {/* Center Stage: Smartwatch Dial & Honeycomb Panal Launcher */}
-      <main className="relative z-20 flex-1 flex flex-col items-center justify-center px-4 py-4 sm:py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      {/* Center Stage: Smartwatch Dial & Intuitive 2x2 App Grid with Balanced Dimensions */}
+      <main className="relative z-20 flex-1 flex flex-col items-center justify-center px-4 py-3 sm:py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         {/* Smartwatch Clock & Date Display */}
-        <div className="flex flex-col items-center mb-6 sm:mb-8 text-center animate-in fade-in zoom-in-95 duration-500">
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 sm:py-1 rounded-full bg-white/80 border border-slate-200/90 shadow-sm mb-1.5 sm:mb-2 backdrop-blur-md">
-            <div className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
-            <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-[#002244] uppercase">
+        <div className="flex flex-col items-center mb-5 sm:mb-8 text-center animate-in fade-in zoom-in-95 duration-500">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/80 border border-slate-200/90 shadow-2xs mb-1.5 backdrop-blur-md">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+            <span className="text-[9px] font-extrabold tracking-widest text-[#002244] uppercase">
               {currentDate || 'VITALITY CENTRAL'}
             </span>
           </div>
-          <div className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#002244] font-mono drop-shadow-sm">
+          <div className="text-3xl xs:text-4xl sm:text-5xl font-black tracking-tight text-[#002244] font-mono drop-shadow-xs">
             {currentTime || '12:00:00 PM'}
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-500 mt-1 font-medium">
-            Toca un icono para acceder a la sub-aplicación
+          <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 font-medium">
+            Selecciona un módulo para acceder
           </p>
         </div>
 
-        {/* Honeycomb Grid Container (Staggered Circular Bubbles) */}
-        <div className="relative max-w-lg w-full flex flex-col items-center gap-4 sm:gap-6">
-          {/* Row 1: CRM & SETS */}
-          <div className="flex items-center justify-center gap-5 sm:gap-10">
-            {subApps.slice(0, 2).map((app) => (
-              <Link
-                key={app.id}
-                href={app.href}
-                className="group relative flex flex-col items-center focus:outline-none"
-                style={{ touchAction: 'manipulation' }}
+        {/* Intuitive 2x2 Grid Container with Balanced Icon Size */}
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 max-w-[320px] xs:max-w-[360px] sm:max-w-md w-full place-items-center">
+          {subApps.map((app) => (
+            <Link
+              key={app.id}
+              href={app.href}
+              className="group flex flex-col items-center focus:outline-none w-full"
+              style={{ touchAction: 'manipulation' }}
+            >
+              {/* App Tile (Balanced Squircle / Smartwatch App Icon) */}
+              <div
+                className="w-20 h-20 xs:w-22 xs:h-22 sm:w-24 sm:h-24 md:w-26 md:h-26 rounded-[22px] sm:rounded-[26px] flex flex-col items-center justify-center p-2 transition-all duration-200 transform group-hover:scale-105 active:scale-95 border border-white/60 group-hover:border-white shadow-md group-hover:shadow-lg"
+                style={{
+                  background: app.bgGradient,
+                  boxShadow: `0 8px 18px ${app.shadowColor}`
+                }}
               >
-                {/* Outer Circular Bubble with Glow */}
-                <div
-                  className="w-24 h-24 sm:w-30 sm:h-30 md:w-32 md:h-32 rounded-full flex flex-col items-center justify-center p-2.5 sm:p-3 transition-all duration-300 transform group-hover:scale-110 active:scale-95 border-2 border-white/60 group-hover:border-white shadow-lg"
-                  style={{
-                    background: app.bgGradient,
-                    boxShadow: `0 12px 24px ${app.shadowColor}`
-                  }}
-                >
-                  <div className="transition-transform duration-300 group-hover:-translate-y-1">
-                    {app.iconSvg}
-                  </div>
-                  <span className="mt-0.5 sm:mt-1 text-xs sm:text-sm md:text-base font-extrabold tracking-tight text-white drop-shadow">
-                    /{app.title}
-                  </span>
+                <div className="transition-transform duration-200 group-hover:-translate-y-0.5">
+                  {app.iconSvg}
                 </div>
-                {/* Subtitle tag */}
-                <span className="mt-1.5 sm:mt-2 text-[10px] sm:text-[11px] font-bold text-slate-600 tracking-wide uppercase transition-colors group-hover:text-[#002244]">
-                  {app.subtitle}
+                <span className="mt-1 text-[11px] sm:text-xs font-black tracking-tight text-white drop-shadow-xs">
+                  {app.title}
                 </span>
-              </Link>
-            ))}
-          </div>
-
-          {/* Row 2: PROSPECC & FORMDEMO (Offset / Honeycomb Stagger) */}
-          <div className="flex items-center justify-center gap-5 sm:gap-10">
-            {subApps.slice(2, 4).map((app) => (
-              <Link
-                key={app.id}
-                href={app.href}
-                className="group relative flex flex-col items-center focus:outline-none"
-                style={{ touchAction: 'manipulation' }}
-              >
-                {/* Outer Circular Bubble with Glow */}
-                <div
-                  className="w-24 h-24 sm:w-30 sm:h-30 md:w-32 md:h-32 rounded-full flex flex-col items-center justify-center p-2.5 sm:p-3 transition-all duration-300 transform group-hover:scale-110 active:scale-95 border-2 border-white/60 group-hover:border-white shadow-lg"
-                  style={{
-                    background: app.bgGradient,
-                    boxShadow: `0 12px 24px ${app.shadowColor}`
-                  }}
-                >
-                  <div className="transition-transform duration-300 group-hover:-translate-y-1">
-                    {app.iconSvg}
-                  </div>
-                  <span className="mt-0.5 sm:mt-1 text-xs sm:text-sm md:text-base font-extrabold tracking-tight text-white drop-shadow">
-                    /{app.title}
-                  </span>
-                </div>
-                {/* Subtitle tag */}
-                <span className="mt-1.5 sm:mt-2 text-[10px] sm:text-[11px] font-bold text-slate-600 tracking-wide uppercase transition-colors group-hover:text-[#002244]">
-                  {app.subtitle}
-                </span>
-              </Link>
-            ))}
-          </div>
+              </div>
+              {/* Subtitle tag */}
+              <span className="mt-1.5 text-[9px] sm:text-[10px] font-bold text-slate-600 tracking-wide uppercase transition-colors group-hover:text-[#002244]">
+                {app.subtitle}
+              </span>
+            </Link>
+          ))}
         </div>
       </main>
 

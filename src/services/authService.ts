@@ -76,7 +76,26 @@ export const setStoredAccessToken = (token: string | null) => {
 export async function loginWithGoogle(customAdvisorName?: string): Promise<{ user: User; profile: CrmUserProfile; accessToken?: string }> {
   // Siempre crear un provider fresco con prompt consent
   const provider = createGoogleProvider();
-  const result = await signInWithPopup(auth, provider);
+  let result;
+  try {
+    result = await signInWithPopup(auth, provider);
+  } catch (popupErr: any) {
+    console.warn('[Auth] signInWithPopup advertencia:', popupErr?.code, popupErr?.message);
+    if (
+      popupErr?.code === 'auth/popup-blocked' ||
+      popupErr?.code === 'auth/popup-closed-by-user' ||
+      popupErr?.code === 'auth/cancelled-popup-request'
+    ) {
+      try {
+        const { signInWithRedirect } = await import('firebase/auth');
+        await signInWithRedirect(auth, provider);
+        return new Promise(() => {}); // Espera el flujo de redirección móvil
+      } catch (redirectErr) {
+        throw popupErr;
+      }
+    }
+    throw popupErr;
+  }
   const credential = GoogleAuthProvider.credentialFromResult(result);
   const accessToken = credential?.accessToken;
 
@@ -158,6 +177,29 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
   }
 
   return { user, profile, accessToken };
+}
+
+/**
+ * Procesa el retorno de autenticación por redirección (Android e iOS Safari)
+ */
+export async function handleRedirectAuth(): Promise<{ user: User; profile: CrmUserProfile } | null> {
+  try {
+    const { getRedirectResult } = await import('firebase/auth');
+    const result = await getRedirectResult(auth);
+    if (result) {
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setStoredAccessToken(credential.accessToken);
+      }
+      const profile = await getUserProfile(result.user.uid, result.user.email);
+      if (profile) {
+        return { user: result.user, profile };
+      }
+    }
+  } catch (err) {
+    console.warn('[Auth] handleRedirectAuth note:', err);
+  }
+  return null;
 }
 
 /**
