@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { LeadData, CallLogEntry, DEFAULT_SHEET_TABS, DEFAULT_REC_TABS, LS_ACTIVE_SHEET_TAB, LS_ACTIVE_ADMIN_REP, LS_LEAD_CATEGORY_VIEW } from '@/data/leadTypes';
-export type AdminRep = 'ALL' | 'Jangel' | 'Ricfel' | 'Jose Angel';
+export type AdminRep = 'ALL' | 'Jangel' | 'Ric' | 'Ricfel' | 'Jose Angel';
 const getSavedSheetTabs = (): string[] => DEFAULT_SHEET_TABS;
 import { db } from '@/firebase/firebaseClient';
 import {
@@ -1372,6 +1373,35 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     isDraggingTabsRef.current = false;
   };
 
+  // ── Mobile Responsive Stepped Column View (Pares de 2 en 2) ───────────────
+  const isMobile = useIsMobile();
+  const [mobileColPairIndex, setMobileColPairIndex] = useState<number>(0);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+
+  const handleTableTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTableTouchEnd = (e: React.TouchEvent, totalPairs: number) => {
+    if (!isMobile || touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
+    if (Math.abs(deltaX) > 35 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+      if (deltaX < 0) {
+        // Deslizar hacia la izquierda -> avanzar a las siguientes 2 columnas
+        setMobileColPairIndex(prev => Math.min(prev + 1, totalPairs - 1));
+      } else {
+        // Deslizar hacia la derecha -> retroceder a las 2 columnas anteriores
+        setMobileColPairIndex(prev => Math.max(prev - 1, 0));
+      }
+    }
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
+
   // ── Auth & Google Contacts Sync States (Global Auth Context) ──────────────
   const {
     currentUser,
@@ -1391,8 +1421,8 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     if (userProfile) {
       if (userProfile.role === 'ultra_admin') {
         setSelectedRep('ALL');
-      } else if (userProfile.assignedRepName === 'Ricfel') {
-        setSelectedRep('Ricfel');
+      } else if (userProfile.assignedRepName === 'Ric' || userProfile.assignedRepName === 'Ricfel') {
+        setSelectedRep('Ric');
         setActiveTab('Mod Avcn (R)');
       } else if (userProfile.assignedRepName === 'Jangel' || userProfile.assignedRepName === 'Jose Angel') {
         setSelectedRep('Jangel');
@@ -1491,7 +1521,8 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
         setSelectedRep('ALL');
       } else if (profile?.assignedRepName) {
         setSelectedRep(profile.assignedRepName as AdminRep);
-        if (profile.assignedRepName === 'Ricfel') {
+        if (profile.assignedRepName === 'Ric' || profile.assignedRepName === 'Ricfel') {
+          setSelectedRep('Ric');
           setActiveTab('Mod Avcn (R)');
         } else {
           setActiveTab('Prospecc');
@@ -1567,7 +1598,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   const [selectedRep, setSelectedRep] = useState<AdminRep>(() => {
     try {
       const saved = localStorage.getItem(LS_ACTIVE_ADMIN_REP);
-      if (saved === 'Ricfel' || saved === 'Jose Angel' || saved === 'ALL') return saved;
+      if (saved === 'Ric' || saved === 'Ricfel' || saved === 'Jose Angel' || saved === 'ALL') return saved as AdminRep;
       return 'ALL';
     } catch {
       return 'ALL';
@@ -1576,12 +1607,14 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   const [showRepModal, setShowRepModal] = useState<boolean>(false);
   const [isPortalOpen, setIsPortalOpen] = useState<boolean>(false);
 
-  // Rol estricto para acceso al Portal: solo Ricfel, Jose Angel y SuperAdmin (o UltraAdmin)
+  // Rol estricto para acceso al Portal: solo Ric, Jose Angel y SuperAdmin (o UltraAdmin)
   const isPortalAuthorized = Boolean(
     userProfile?.role === 'ultra_admin' ||
     userProfile?.role === 'superadmin' ||
+    selectedRep === 'Ric' ||
     selectedRep === 'Ricfel' ||
     selectedRep === 'Jose Angel' ||
+    userProfile?.assignedRepName === 'Ric' ||
     userProfile?.assignedRepName === 'Ricfel' ||
     userProfile?.assignedRepName === 'Jose Angel' ||
     currentUser?.email?.toLowerCase().includes('r.olaizola') ||
@@ -1595,7 +1628,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     try {
       localStorage.setItem(LS_ACTIVE_ADMIN_REP, rep);
     } catch (e) {}
-    if (rep === 'Ricfel') {
+    if (rep === 'Ric' || rep === 'Ricfel') {
       setActiveTab('Mod Avcn (R)');
     } else {
       setActiveTab('Prospecc');
@@ -2079,11 +2112,11 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
       return myTabs;
     }
     return sheetTabs.filter(tab => {
-      if (selectedRep === 'Ricfel') {
-        return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ricfel');
+      if (selectedRep === 'Ric' || selectedRep === 'Ricfel') {
+        return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ric');
       }
       if (selectedRep === 'Jose Angel' || selectedRep === 'Jangel') {
-        return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ricfel');
+        return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ric');
       }
       return true; // 'ALL' (UltraAdmin y vista Consolidada)
     });
@@ -2104,7 +2137,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     }
     return categoryLeads.filter(lead => {
       const tab = getLeadSheetTab(lead);
-      if (selectedRep === 'Ricfel') {
+      if (selectedRep === 'Ric' || selectedRep === 'Ricfel') {
         return visibleTabs.includes(tab);
       }
       if (selectedRep === 'Jose Angel' || selectedRep === 'Jangel') {
@@ -2458,19 +2491,19 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedRep('Ricfel')}
+                  onClick={() => setSelectedRep('Ric')}
                   style={{
-                    background: selectedRep === 'Ricfel' ? (isDark ? '#F59E0B' : '#D97706') : 'transparent',
-                    color: selectedRep === 'Ricfel' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#475569'),
+                    background: (selectedRep === 'Ric' || selectedRep === 'Ricfel') ? (isDark ? '#F59E0B' : '#D97706') : 'transparent',
+                    color: (selectedRep === 'Ric' || selectedRep === 'Ricfel') ? '#FFFFFF' : (isDark ? '#94A3B8' : '#475569'),
                     border: 'none',
                     borderRadius: '12px',
                     padding: '2px 8px',
                     fontSize: '0.72rem',
-                    fontWeight: selectedRep === 'Ricfel' ? 700 : 500,
+                    fontWeight: (selectedRep === 'Ric' || selectedRep === 'Ricfel') ? 700 : 500,
                     cursor: 'pointer'
                   }}
                 >
-                  Ricfel
+                  Ric
                 </button>
               </div>
             )}
@@ -3142,7 +3175,8 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                   <th
                     key={col.key}
                     style={{
-                      minWidth: col.minWidth || '120px',
+                      minWidth: isMobile ? 'auto' : (col.minWidth || '120px'),
+                      width: isMobile ? 'calc(50% - 19px)' : undefined,
                       background: hasActiveFilter 
                         ? (isDark ? 'rgba(59, 130, 246, 0.25)' : '#F0F5FA') 
                         : (isDark ? '#111827' : (col.headerBg || '#F8FAFC')),
@@ -3598,103 +3632,233 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
                 }
               };
 
+              const totalColPairs = Math.max(1, Math.ceil(orderedVisibleColumns.length / 2));
+              const safeColPairIndex = Math.min(mobileColPairIndex, totalColPairs - 1);
+              const columnsToRender = isMobile 
+                ? orderedVisibleColumns.slice(safeColPairIndex * 2, safeColPairIndex * 2 + 2) 
+                : orderedVisibleColumns;
+
               return (
-                <table className="spreadsheet-table" style={{ width: '100%', minWidth: '100%', borderCollapse: 'collapse', background: isDark ? '#0B0F19' : '#FFFFFF', color: isDark ? '#F1F5F9' : 'inherit', transition: 'background-color 0.25s ease' }}>
-                  <thead>
-                    <tr>
-                      {/* Checkbox Columna Seleccionar Todo */}
-                      <th
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%' }}>
+                  {/* Estilo Global de Transición con Desenfoque de 0.5s */}
+                  <style jsx global>{`
+                    @keyframes mobileColBlurFade {
+                      0% {
+                        filter: blur(5px);
+                        opacity: 0.65;
+                      }
+                      100% {
+                        filter: blur(0px);
+                        opacity: 1;
+                      }
+                    }
+                    .mobile-col-blur-transition {
+                      animation: mobileColBlurFade 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+                    }
+                  `}</style>
+
+                  {/* Barra Stepper de Columnas en Móvil (Pares de 2 en 2) */}
+                  {isMobile && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '6px 10px',
+                        background: isDark ? '#0F172A' : '#F1F5F9',
+                        borderBottom: isDark ? '1px solid #1E293B' : '1px solid #CBD5E1',
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 10,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                        flexShrink: 0
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setMobileColPairIndex(prev => Math.max(prev - 1, 0))}
+                        disabled={safeColPairIndex === 0}
                         style={{
-                          width: '36px',
-                          minWidth: '36px',
-                          textAlign: 'center',
-                          background: isDark ? '#111827' : '#F8FAFC',
-                          borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1',
-                          padding: '8px 4px'
+                          border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                          background: safeColPairIndex === 0 ? 'transparent' : (isDark ? '#1E293B' : '#FFFFFF'),
+                          color: safeColPairIndex === 0 ? (isDark ? '#475569' : '#94A3B8') : (isDark ? '#60A5FA' : '#004D99'),
+                          borderRadius: '6px',
+                          padding: '3px 9px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: safeColPairIndex === 0 ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          opacity: safeColPairIndex === 0 ? 0.4 : 1,
+                          transition: 'all 0.15s ease'
                         }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id))}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              const next = new Set(selectedLeadIds);
-                              filteredLeads.forEach(l => next.add(l.id));
-                              setSelectedLeadIds(Array.from(next));
-                            } else {
-                              const filteredSet = new Set(filteredLeads.map(l => l.id));
-                              setSelectedLeadIds(prev => prev.filter(id => !filteredSet.has(id)));
-                            }
-                          }}
-                          style={{ cursor: 'pointer', accentColor: '#10B981' }}
-                          title="Seleccionar / deseleccionar leads visibles"
-                        />
-                      </th>
-                      {orderedVisibleColumns.map(colKey => renderHeaderCell(colKey))}
-                    </tr>
-                  </thead>
+                        ◀ Ant
+                      </button>
 
-                  <tbody>
-                    {filteredLeads.length === 0 ? (
-                      <tr>
-                        <td colSpan={orderedVisibleColumns.length + 1} style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>No hay prospectos en la pestaña "{activeTab === '__ALL__' ? 'Todas' : activeTab}".</div>
-                          <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '4px' }}>
-                            {searchTerm ? 'Prueba con otro término de búsqueda o limpia los filtros.' : 'Los nuevos prospectos que ingreses aparecerán aquí.'}
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredLeads.map((lead, index) => {
-                        const isRowSelected = selectedLeadIds.includes(lead.id);
-                        const rowBg = isRowSelected
-                          ? (isDark ? 'rgba(16, 185, 129, 0.16)' : '#ECFDF5')
-                          : (index % 2 === 0
-                              ? (isDark ? '#0B0F19' : '#FFFFFF')
-                              : (isDark ? '#111827' : '#F8FAFC'));
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: isDark ? '#F1F5F9' : '#0F172A' }}>
+                          Columnas {safeColPairIndex * 2 + 1}-{Math.min((safeColPairIndex + 1) * 2, orderedVisibleColumns.length)} de {orderedVisibleColumns.length}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          {Array.from({ length: totalColPairs }).map((_, idx) => (
+                            <span
+                              key={idx}
+                              onClick={() => setMobileColPairIndex(idx)}
+                              style={{
+                                width: idx === safeColPairIndex ? '14px' : '5px',
+                                height: '5px',
+                                borderRadius: '3px',
+                                background: idx === safeColPairIndex ? '#3B82F6' : (isDark ? '#334155' : '#CBD5E1'),
+                                transition: 'all 0.25s ease',
+                                cursor: 'pointer'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
 
-                        return (
-                          <tr
-                            key={lead.id}
+                      <button
+                        type="button"
+                        onClick={() => setMobileColPairIndex(prev => Math.min(prev + 1, totalColPairs - 1))}
+                        disabled={safeColPairIndex >= totalColPairs - 1}
+                        style={{
+                          border: isDark ? '1px solid #334155' : '1px solid #CBD5E1',
+                          background: safeColPairIndex >= totalColPairs - 1 ? 'transparent' : (isDark ? '#1E293B' : '#FFFFFF'),
+                          color: safeColPairIndex >= totalColPairs - 1 ? (isDark ? '#475569' : '#94A3B8') : (isDark ? '#60A5FA' : '#004D99'),
+                          borderRadius: '6px',
+                          padding: '3px 9px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: safeColPairIndex >= totalColPairs - 1 ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          opacity: safeColPairIndex >= totalColPairs - 1 ? 0.4 : 1,
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        Sig ▶
+                      </button>
+                    </div>
+                  )}
+
+                  <div 
+                    onTouchStart={handleTableTouchStart}
+                    onTouchEnd={(e) => handleTableTouchEnd(e, totalColPairs)}
+                    style={{ flex: 1, minHeight: 0, overflow: 'auto', width: '100%' }}
+                  >
+                    <table
+                      key={isMobile ? safeColPairIndex : 'desktop'}
+                      className={`spreadsheet-table ${isMobile ? 'mobile-col-blur-transition' : ''}`}
+                      style={{
+                        width: '100%',
+                        minWidth: isMobile ? '100%' : '100%',
+                        tableLayout: isMobile ? 'fixed' : 'auto',
+                        borderCollapse: 'collapse',
+                        background: isDark ? '#0B0F19' : '#FFFFFF',
+                        color: isDark ? '#F1F5F9' : 'inherit',
+                        transition: 'background-color 0.25s ease'
+                      }}
+                    >
+                      <thead>
+                        <tr>
+                          {/* Checkbox Columna Seleccionar Todo */}
+                          <th
                             style={{
-                              background: rowBg,
-                              borderBottom: isDark ? '1px solid #1E293B' : '1px solid #F1F5F9',
-                              transition: 'background-color 0.15s ease'
+                              width: '36px',
+                              minWidth: '36px',
+                              textAlign: 'center',
+                              background: isDark ? '#111827' : '#F8FAFC',
+                              borderBottom: isDark ? '1.5px solid #1E293B' : '1.5px solid #CBD5E1',
+                              padding: '8px 4px'
                             }}
                           >
-                            {/* Checkbox Fila */}
-                            <td
-                              style={{
-                                width: '36px',
-                                minWidth: '36px',
-                                textAlign: 'center',
-                                verticalAlign: 'middle',
-                                padding: '6px 4px'
+                            <input
+                              type="checkbox"
+                              checked={filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id))}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  const next = new Set(selectedLeadIds);
+                                  filteredLeads.forEach(l => next.add(l.id));
+                                  setSelectedLeadIds(Array.from(next));
+                                } else {
+                                  const filteredSet = new Set(filteredLeads.map(l => l.id));
+                                  setSelectedLeadIds(prev => prev.filter(id => !filteredSet.has(id)));
+                                }
                               }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isRowSelected}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedLeadIds(prev => Array.from(new Set([...prev, lead.id])));
-                                  } else {
-                                    setSelectedLeadIds(prev => prev.filter(id => id !== lead.id));
-                                  }
-                                }}
-                                style={{ cursor: 'pointer', accentColor: '#10B981' }}
-                                title="Seleccionar este prospecto"
-                              />
-                            </td>
+                              style={{ cursor: 'pointer', accentColor: '#10B981' }}
+                              title="Seleccionar / deseleccionar leads visibles"
+                            />
+                          </th>
+                          {columnsToRender.map(colKey => renderHeaderCell(colKey))}
+                        </tr>
+                      </thead>
 
-                            {/* Celdas dinámicas según el orden y visibilidad configurados */}
-                            {orderedVisibleColumns.map(colKey => renderLeadCell(lead, colKey))}
+                      <tbody>
+                        {filteredLeads.length === 0 ? (
+                          <tr>
+                            <td colSpan={columnsToRender.length + 1} style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>
+                              <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>No hay prospectos en la pestaña "{activeTab === '__ALL__' ? 'Todas' : activeTab}".</div>
+                              <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '4px' }}>
+                                {searchTerm ? 'Prueba con otro término de búsqueda o limpia los filtros.' : 'Los nuevos prospectos que ingreses aparecerán aquí.'}
+                              </div>
+                            </td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                        ) : (
+                          filteredLeads.map((lead, index) => {
+                            const isRowSelected = selectedLeadIds.includes(lead.id);
+                            const rowBg = isRowSelected
+                              ? (isDark ? 'rgba(16, 185, 129, 0.16)' : '#ECFDF5')
+                              : (index % 2 === 0
+                                  ? (isDark ? '#0B0F19' : '#FFFFFF')
+                                  : (isDark ? '#111827' : '#F8FAFC'));
+
+                            return (
+                              <tr
+                                key={lead.id}
+                                style={{
+                                  background: rowBg,
+                                  borderBottom: isDark ? '1px solid #1E293B' : '1px solid #F1F5F9',
+                                  transition: 'background-color 0.15s ease'
+                                }}
+                              >
+                                {/* Checkbox Fila */}
+                                <td
+                                  style={{
+                                    width: '36px',
+                                    minWidth: '36px',
+                                    textAlign: 'center',
+                                    verticalAlign: 'middle',
+                                    padding: '6px 4px'
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isRowSelected}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedLeadIds(prev => Array.from(new Set([...prev, lead.id])));
+                                      } else {
+                                        setSelectedLeadIds(prev => prev.filter(id => id !== lead.id));
+                                      }
+                                    }}
+                                    style={{ cursor: 'pointer', accentColor: '#10B981' }}
+                                    title="Seleccionar este prospecto"
+                                  />
+                                </td>
+
+                                {/* Celdas dinámicas según el orden y visibilidad configurados */}
+                                {columnsToRender.map(colKey => renderLeadCell(lead, colKey))}
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               );
             })()}
         </div>
@@ -4443,13 +4607,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     />
 
     {/* Botón Flotante Vitality para volver al Hub Central */}
-    <FloatingHubHomeButton
-      position="bottom-right"
-      style={{
-        bottom: 'max(46px, calc(env(safe-area-inset-bottom) + 40px))',
-        right: 'max(12px, env(safe-area-inset-right))'
-      }}
-    />
+    <FloatingHubHomeButton position="bottom-right" />
 
     <PortalModal
       isOpen={isPortalOpen}

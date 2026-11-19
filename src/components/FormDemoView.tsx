@@ -287,10 +287,10 @@ export const FormDemoView: React.FC = () => {
                     onChange={(e) => setAsesor(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-base sm:text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none min-h-[44px]"
                   >
-                    <option value="Ricfel">Ricfel</option>
+                    <option value="Ric">Ric</option>
                     <option value="Jangel">Jangel</option>
                     {crmUsers
-                      .filter(u => u.displayName && !['Ricfel', 'Jangel', 'Ricfel Olaizola', 'José Angel Borges', 'Jose Angel'].includes(u.displayName))
+                      .filter(u => u.displayName && !['Ric', 'Ricfel', 'Jangel', 'Ricfel Olaizola', 'José Angel Borges', 'Jose Angel'].includes(u.displayName))
                       .map(u => (
                         <option key={u.uid} value={u.displayName}>
                           {u.displayName}

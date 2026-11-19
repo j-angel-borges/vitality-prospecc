@@ -114,7 +114,7 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
   const emailLower = (user.email || '').toLowerCase();
   const isUltraAdmin = emailLower === 'mipropiadinastia@gmail.com';
   const isJoseAngel = emailLower.includes('jangelborges') || (customAdvisorName ? /jangel|jose|angel/i.test(customAdvisorName) : false);
-  const isRicfel = emailLower.includes('r.olaizola') || emailLower.includes('ricfel') || (customAdvisorName ? /ricfel/i.test(customAdvisorName) : false);
+  const isRicfel = emailLower.includes('r.olaizola') || emailLower.includes('ricfel') || (customAdvisorName ? /ricfel|ric\b/i.test(customAdvisorName) : false);
 
   const cleanCustom = (customAdvisorName || '').trim();
   let assignedRole: UserRole = 'sales_rep';
@@ -125,7 +125,7 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
     assignedRep = 'ALL';
   } else if (isRicfel) {
     assignedRole = 'superadmin';
-    assignedRep = 'Ricfel';
+    assignedRep = 'Ric';
   } else if (isJoseAngel) {
     assignedRole = 'superadmin';
     assignedRep = 'Jangel';
@@ -152,9 +152,9 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
       profile.displayName = 'Jangel';
       updates.displayName = 'Jangel';
       needsUpdate = true;
-    } else if (isRicfel && profile.displayName !== 'Ricfel') {
-      profile.displayName = 'Ricfel';
-      updates.displayName = 'Ricfel';
+    } else if (isRicfel && profile.displayName !== 'Ric') {
+      profile.displayName = 'Ric';
+      updates.displayName = 'Ric';
       needsUpdate = true;
     }
 
@@ -176,7 +176,7 @@ export async function loginWithGoogle(customAdvisorName?: string): Promise<{ use
         ? cleanCustom 
         : (isUltraAdmin 
           ? 'Ultra Admin (Dinastía)' 
-          : (isJoseAngel ? 'Jangel' : (isRicfel ? 'Ricfel' : (user.displayName || 'Asesor Comercial')))),
+          : (isJoseAngel ? 'Jangel' : (isRicfel ? 'Ric' : (user.displayName || 'Asesor Comercial')))),
       photoURL: user.photoURL || undefined,
       role: assignedRole,
       assignedRepName: assignedRep,
@@ -241,7 +241,7 @@ export async function getUserProfile(uid: string, email?: string | null): Promis
         profile.assignedRepName = 'Jangel';
       } else if (emailLower.includes('r.olaizola') || emailLower.includes('ricfel')) {
         profile.role = 'superadmin';
-        profile.assignedRepName = 'Ricfel';
+        profile.assignedRepName = 'Ric';
       }
       return profile;
     }
@@ -252,17 +252,17 @@ export async function getUserProfile(uid: string, email?: string | null): Promis
     const isRicfel = emailLower.includes('r.olaizola') || emailLower.includes('ricfel');
 
     let assignedRole: UserRole = 'sales_rep';
-    let assignedRep = 'Jose Angel';
+    let assignedRep = 'Jangel';
 
     if (isUltraAdmin) {
       assignedRole = 'ultra_admin';
       assignedRep = 'ALL';
     } else if (isRicfel) {
       assignedRole = 'superadmin';
-      assignedRep = 'Ricfel';
+      assignedRep = 'Ric';
     } else if (isJoseAngel) {
       assignedRole = 'superadmin';
-      assignedRep = 'Jose Angel';
+      assignedRep = 'Jangel';
     } else {
       assignedRole = 'sales_rep';
       assignedRep = 'Asesor Comercial';
@@ -273,7 +273,7 @@ export async function getUserProfile(uid: string, email?: string | null): Promis
       email: email || '',
       displayName: isUltraAdmin 
         ? 'Ultra Admin (Dinastía)' 
-        : (isJoseAngel ? 'José Angel (SuperAdmin)' : (isRicfel ? 'Ricfel (SuperAdmin)' : 'Asesor Vitality')),
+        : (isJoseAngel ? 'Jangel' : (isRicfel ? 'Ric' : 'Asesor Vitality')),
       role: assignedRole,
       assignedRepName: assignedRep,
       lastLogin: serverTimestamp()

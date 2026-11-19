@@ -175,7 +175,7 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej. Ricfel / Jangel"
+                  placeholder="Ej. Ric / Jangel"
                   value={advisorName}
                   onChange={(e) => setAdvisorName(e.target.value)}
                   style={{
@@ -197,13 +197,13 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
                 <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => setAdvisorName('Ricfel')}
+                    onClick={() => setAdvisorName('Ric')}
                     style={{
                       padding: '5px 12px',
                       borderRadius: '8px',
                       border: isDark ? '1px solid #334155' : '1px solid #E2E8F0',
-                      background: advisorName === 'Ricfel' ? (isDark ? 'rgba(124, 58, 237, 0.25)' : '#F5F3FF') : (isDark ? '#1E293B' : '#F1F5F9'),
-                      color: advisorName === 'Ricfel' ? (isDark ? '#C4B5FD' : '#7C3AED') : (isDark ? '#94A3B8' : '#475569'),
+                      background: (advisorName === 'Ric' || advisorName === 'Ricfel') ? (isDark ? 'rgba(124, 58, 237, 0.25)' : '#F5F3FF') : (isDark ? '#1E293B' : '#F1F5F9'),
+                      color: (advisorName === 'Ric' || advisorName === 'Ricfel') ? (isDark ? '#C4B5FD' : '#7C3AED') : (isDark ? '#94A3B8' : '#475569'),
                       fontSize: '0.78rem',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -217,7 +217,7 @@ export const LoginGatekeeperModal: React.FC<LoginGatekeeperModalProps> = ({
                       <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
                       <circle cx="12" cy="7" r="4"/>
                     </svg>
-                    <span>Ricfel</span>
+                    <span>Ric</span>
                   </button>
                   <button
                     type="button"

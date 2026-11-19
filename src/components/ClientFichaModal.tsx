@@ -187,9 +187,9 @@ export const ClientFichaModal: React.FC<ClientFichaModalProps> = ({
                       fontWeight: 600,
                       padding: '2px 7px',
                       borderRadius: '9999px',
-                      background: lead.salesRep === 'Ricfel' ? '#F59E0B22' : '#3B82F622',
-                      color: lead.salesRep === 'Ricfel' ? '#D97706' : '#2563EB',
-                      border: `1px solid ${lead.salesRep === 'Ricfel' ? '#F59E0B44' : '#3B82F644'}`
+                      background: (lead.salesRep === 'Ric' || lead.salesRep === 'Ricfel') ? '#F59E0B22' : '#3B82F622',
+                      color: (lead.salesRep === 'Ric' || lead.salesRep === 'Ricfel') ? '#D97706' : '#2563EB',
+                      border: `1px solid ${(lead.salesRep === 'Ric' || lead.salesRep === 'Ricfel') ? '#F59E0B44' : '#3B82F644'}`
                     }}
                   >
                     {lead.salesRep}

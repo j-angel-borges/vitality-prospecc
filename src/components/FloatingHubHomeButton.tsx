@@ -29,13 +29,13 @@ export const FloatingHubHomeButton: React.FC<FloatingHubHomeButtonProps> = ({
       case 'bottom-right':
         return {
           right: 'max(14px, env(safe-area-inset-right))',
-          // Separación segura sobre la barra inferior del CRM spread
-          bottom: 'max(56px, calc(env(safe-area-inset-bottom) + 50px))',
+          // Elevado un poco más para confort visual y ergonómico sobre cualquier barra inferior
+          bottom: 'max(72px, calc(env(safe-area-inset-bottom) + 66px))',
         };
       case 'bottom-left':
         return {
           left: 'max(14px, env(safe-area-inset-left))',
-          bottom: 'max(56px, calc(env(safe-area-inset-bottom) + 50px))',
+          bottom: 'max(72px, calc(env(safe-area-inset-bottom) + 66px))',
         };
       case 'top-left':
         return {
@@ -50,7 +50,7 @@ export const FloatingHubHomeButton: React.FC<FloatingHubHomeButtonProps> = ({
       default:
         return {
           right: 'max(14px, env(safe-area-inset-right))',
-          bottom: 'max(56px, calc(env(safe-area-inset-bottom) + 50px))',
+          bottom: 'max(72px, calc(env(safe-area-inset-bottom) + 66px))',
         };
     }
   };
@@ -103,7 +103,7 @@ export const FloatingHubHomeButton: React.FC<FloatingHubHomeButtonProps> = ({
         >
           <Link
             href="/"
-            className={`vitality-floating-hub-inner group w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-slate-800 shadow-[0_6px_20px_rgba(0,34,68,0.22)] hover:shadow-[0_8px_25px_rgba(0,34,68,0.3)] border border-slate-200/90 backdrop-blur-md flex items-center justify-center active:scale-90 transition-all ${className}`}
+            className={`vitality-floating-hub-inner group w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-slate-800 shadow-[0_8px_24px_rgba(0,34,68,0.28)] hover:shadow-[0_10px_28px_rgba(0,34,68,0.36)] border-[1.5px] border-[#004D99] backdrop-blur-md flex items-center justify-center active:scale-90 transition-all ${className}`}
             title="Volver al Hub Principal (Vitality ERP)"
             aria-label="Volver al Hub Principal (Vitality ERP)"
           >

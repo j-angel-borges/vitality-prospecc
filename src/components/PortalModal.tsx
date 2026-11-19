@@ -44,7 +44,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
   const [transferAction, setTransferAction] = useState<'move' | 'copy'>('move');
   const [transferFromRep, setTransferFromRep] = useState<string>('Jangel');
   const [transferTab, setTransferTab] = useState<string>('__ALL_FROM_REP__');
-  const [transferToRep, setTransferToRep] = useState<string>('Ricfel');
+  const [transferToRep, setTransferToRep] = useState<string>('Ric');
   const [targetTabName, setTargetTabName] = useState<string>('KEEP_CURRENT');
   const [customTargetTab, setCustomTargetTab] = useState<string>('');
   const [isTransferring, setIsTransferring] = useState<boolean>(false);
@@ -100,18 +100,19 @@ export const PortalModal: React.FC<PortalModalProps> = ({
 
   // Leads count per rep
   const repCounts = useMemo(() => {
-    const ricfelCount = leads.filter(l => {
+    const ricCount = leads.filter(l => {
       const tab = l.sheetTab || '';
-      return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ricfel');
+      return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ric');
     }).length;
 
     const jangelCount = leads.filter(l => {
       const tab = l.sheetTab || '';
-      return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ricfel');
+      return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ric');
     }).length;
 
     return {
-      Ricfel: ricfelCount,
+      Ric: ricCount,
+      Ricfel: ricCount,
       Jangel: jangelCount,
       'Jose Angel': jangelCount,
       ALL: leads.length
@@ -121,11 +122,11 @@ export const PortalModal: React.FC<PortalModalProps> = ({
   // Source tabs for transfer
   const sourceTabs = useMemo(() => {
     return sheetTabs.filter((tab) => {
-      if (transferFromRep === 'Ricfel') {
-        return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ricfel');
+      if (transferFromRep === 'Ric' || transferFromRep === 'Ricfel') {
+        return tab === 'Mod Avcn (R)' || tab === 'Clientes' || tab.toLowerCase().includes('ric');
       }
       if (transferFromRep === 'Jangel' || transferFromRep === 'Jose Angel') {
-        return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ricfel');
+        return tab !== 'Mod Avcn (R)' && tab !== 'Clientes' && !tab.toLowerCase().includes('ric');
       }
       return true;
     });
@@ -435,7 +436,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                 <div>
                   <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700 }}>Equipo Comercial & Asesores</h3>
                   <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: isDark ? '#94A3B8' : '#64748B' }}>
-                    Ambos superadministradores (Ricfel y Jose Angel) pueden inspeccionar y entrar a los leads de los demás.
+                    Ambos superadministradores (Ric y Jose Angel) pueden inspeccionar y entrar a los leads de los demás.
                   </p>
                 </div>
                 <div
@@ -448,20 +449,20 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                     color: isDark ? '#94A3B8' : '#475569'
                   }}
                 >
-                  Espacio activo: <strong>{selectedRep}</strong>
+                  Espacio activo: <strong>{selectedRep === 'Ricfel' ? 'Ric' : selectedRep}</strong>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
-                {/* Card Ricfel (SuperAdmin) */}
+                {/* Card Ric (SuperAdmin) */}
                 <div
                   style={{
                     padding: '16px',
                     borderRadius: '12px',
-                    background: selectedRep === 'Ricfel'
+                    background: (selectedRep === 'Ric' || selectedRep === 'Ricfel')
                       ? (isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF')
                       : (isDark ? '#1E293B' : '#F8FAFC'),
-                    border: selectedRep === 'Ricfel'
+                    border: (selectedRep === 'Ric' || selectedRep === 'Ricfel')
                       ? '2px solid #004D99'
                       : (isDark ? '1px solid #334155' : '1px solid #E2E8F0')
                   }}
@@ -486,18 +487,18 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                       SuperAdmin
                     </span>
                   </div>
-                  <h4 style={{ margin: '0 0 4px', fontSize: '0.96rem', fontWeight: 700 }}>Ricfel</h4>
+                  <h4 style={{ margin: '0 0 4px', fontSize: '0.96rem', fontWeight: 700 }}>Ric</h4>
                   <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: isDark ? '#94A3B8' : '#64748B' }}>
                     r.olaizola@gmail.com
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                     <span style={{ fontSize: '0.78rem', color: isDark ? '#94A3B8' : '#64748B' }}>Leads asignados:</span>
-                    <strong style={{ fontSize: '0.95rem', color: '#004D99' }}>{repCounts.Ricfel} leads</strong>
+                    <strong style={{ fontSize: '0.95rem', color: '#004D99' }}>{repCounts.Ric || repCounts.Ricfel} leads</strong>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      onSelectRep('Ricfel');
+                      onSelectRep('Ric');
                       onSelectTab('Mod Avcn (R)');
                       onClose();
                     }}
@@ -506,14 +507,14 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                       padding: '8px 12px',
                       borderRadius: '8px',
                       border: 'none',
-                      background: selectedRep === 'Ricfel' ? '#004D99' : (isDark ? '#334155' : '#E2E8F0'),
-                      color: selectedRep === 'Ricfel' ? '#FFFFFF' : (isDark ? '#F1F5F9' : '#334155'),
+                      background: (selectedRep === 'Ric' || selectedRep === 'Ricfel') ? '#004D99' : (isDark ? '#334155' : '#E2E8F0'),
+                      color: (selectedRep === 'Ric' || selectedRep === 'Ricfel') ? '#FFFFFF' : (isDark ? '#F1F5F9' : '#334155'),
                       fontWeight: 700,
                       fontSize: '0.8rem',
                       cursor: 'pointer'
                     }}
                   >
-                    {selectedRep === 'Ricfel' ? '✓ Viendo sus leads' : 'Entrar a sus Leads'}
+                    {(selectedRep === 'Ric' || selectedRep === 'Ricfel') ? '✓ Viendo sus leads' : 'Entrar a sus Leads'}
                   </button>
                 </div>
 
@@ -897,7 +898,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                     }}
                   >
                     <option value="Jose Angel">Jose Angel Borges</option>
-                    <option value="Ricfel">Ricfel Olaizola</option>
+                    <option value="Ric">Ric</option>
                     <option value="ALL">Todos los asesores</option>
                   </select>
 
@@ -952,7 +953,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                       marginBottom: '12px'
                     }}
                   >
-                    <option value="Ricfel">Ricfel Olaizola</option>
+                    <option value="Ric">Ric</option>
                     <option value="Jose Angel">Jose Angel Borges</option>
                   </select>
 
@@ -975,7 +976,7 @@ export const PortalModal: React.FC<PortalModalProps> = ({
                     }}
                   >
                     <option value="KEEP_CURRENT">Mantener pestaña original del lead</option>
-                    {transferToRep === 'Ricfel' && (
+                    {(transferToRep === 'Ric' || transferToRep === 'Ricfel') && (
                       <>
                         <option value="Mod Avcn (R)">Asignar a 'Mod Avcn (R)'</option>
                         <option value="Clientes">Asignar a 'Clientes'</option>
