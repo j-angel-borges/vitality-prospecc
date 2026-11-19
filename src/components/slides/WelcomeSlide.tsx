@@ -16,19 +16,9 @@ export function WelcomeSlide({ onStart }: WelcomeSlideProps) {
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden animate-in fade-in duration-700">
-      {/* Top Action Bar with PWA Install & Admin */}
-      <div className="absolute top-4 sm:top-6 inset-x-0 z-30 px-4 sm:px-6 flex items-center justify-between max-w-xl mx-auto">
+      {/* Top Action Bar with PWA Install */}
+      <div className="absolute top-3 sm:top-4 left-3 sm:left-6 z-30 flex items-center">
         <InstallAppButton variant="badge" />
-        <Link href="/">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="border-accent/80 text-accent hover:bg-accent/10 bg-black/40 backdrop-blur-md font-bold tracking-widest text-xs h-8 px-4 rounded-full transition-all active:scale-95 shadow-sm"
-          >
-            <Lock className="h-3 w-3 mr-1.5" />
-            ERP
-          </Button>
-        </Link>
       </div>
 
       {/* Background Image/GIF with 60% Blue Overlay */}

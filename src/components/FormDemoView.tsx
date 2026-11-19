@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/firebase/firebaseClient';
@@ -51,7 +51,7 @@ export const FormDemoView: React.FC = () => {
   }, []);
 
   // Duration in hours/minutes
-  const duracionTexto = tipoCita === 'demo' ? '2 horas y media' : '30 minutos';
+  const duracionTexto = tipoCita === 'demo' ? '2h 30m' : '30 min';
   const duracionMinutos = tipoCita === 'demo' ? 150 : 30;
 
   // Sound generator using Web Audio API
@@ -111,7 +111,7 @@ export const FormDemoView: React.FC = () => {
     if (navigator?.clipboard) {
       navigator.clipboard.writeText(msg);
       setCopiedMsg(true);
-      setTimeout(() => setCopiedMsg(false), 3000);
+      setTimeout(() => setCopiedMsg(false), 2500);
     }
   };
 
@@ -200,35 +200,31 @@ export const FormDemoView: React.FC = () => {
           </Link>
           <div className="flex items-center gap-2.5">
             <img src="/vitality_symbol.png" alt="Vitality" className="w-7 h-7 object-contain" />
-            <div>
-              <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
-                Gestión de Citas (FormDemo)
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-                  Vitality ERP
-                </span>
-              </h1>
-              <p className="text-xs text-slate-400">
-                Agendamiento de demostraciones y socios con cálculo de duración y sincronización
-              </p>
-            </div>
+            <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
+              Gestión de Citas (FormDemo)
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                Vitality ERP
+              </span>
+            </h1>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <Link
             href="/crm"
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-900/40 text-blue-300 hover:bg-blue-900/60 border border-blue-500/30 transition-all flex items-center gap-1.5"
+            className="w-9 h-9 rounded-xl bg-blue-900/40 text-blue-300 hover:bg-blue-900/60 border border-blue-500/30 transition-all flex items-center justify-center"
+            title="Ir al CRM"
           >
-            <span>Ir al CRM</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M3 9h18M9 21V9"/>
             </svg>
           </Link>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8">
+      <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-8">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
           {/* Subtle Ambient Glow */}
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -239,9 +235,6 @@ export const FormDemoView: React.FC = () => {
             <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
               Registrar Nueva Cita de Llamada
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Rellena los datos de la cita concertada. Las Demos se marcarán por 2h 30m y los Socios por 30m.
-            </p>
           </div>
 
           <form onSubmit={handleAgendar} className="space-y-5">
@@ -254,41 +247,35 @@ export const FormDemoView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTipoCita('demo')}
-                  className={`p-4 rounded-xl border text-left transition-all ${
+                  className={`p-3.5 rounded-xl border text-left transition-all ${
                     tipoCita === 'demo'
                       ? 'border-blue-500 bg-blue-600/15 ring-2 ring-blue-500/30 text-white'
                       : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-blue-400">Demostración (Demo)</span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300">
                       2h 30m
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">
-                    Cita culinaria completa con degustación y presentación de productos.
-                  </p>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setTipoCita('socio')}
-                  className={`p-4 rounded-xl border text-left transition-all ${
+                  className={`p-3.5 rounded-xl border text-left transition-all ${
                     tipoCita === 'socio'
                       ? 'border-amber-500 bg-amber-600/15 ring-2 ring-amber-500/30 text-white'
                       : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-amber-400">Reunión de Socio</span>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
                       30 min
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">
-                    Entrevista de oportunidad, plan de compensación o incorporación.
-                  </p>
                 </button>
               </div>
             </div>
@@ -377,7 +364,7 @@ export const FormDemoView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Hora de Inicio (Duración: {duracionTexto})
+                  Hora de Inicio ({duracionTexto})
                 </label>
                 <input
                   type="time"
@@ -395,81 +382,93 @@ export const FormDemoView: React.FC = () => {
                 Observaciones y Notas
               </label>
               <textarea
-                rows={3}
-                placeholder="Notas de la llamada, productos de interés, asistentes a la cita..."
+                rows={2}
+                placeholder="Notas de la llamada, productos de interés..."
                 value={observaciones}
                 onChange={(e) => setObservaciones(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
               />
             </div>
 
-            {/* Actions Bar */}
-            <div className="pt-3 flex flex-col sm:flex-row items-center gap-3">
+            {/* Actions Bar: Pure SVGs as requested in screenshot 083053 */}
+            <div className="pt-3 flex items-center justify-center gap-4">
+              {/* Submit Agendar Button: Pure SVG */}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full sm:flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+                className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-900/30 transition-all active:scale-95 disabled:opacity-50"
+                title="Agendar Cita en Calendario"
+                aria-label="Agendar Cita en Calendario"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <span>{isSubmitting ? 'Agendando...' : 'Agendar Cita en Calendario'}</span>
+                {isSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <path d="M9 16l2 2 4-4"/>
+                  </svg>
+                )}
               </button>
 
-              {/* Botón Campana Animada (Habilitado tras agendar o al tener datos) */}
+              {/* Botón Campana Animada: Pure SVG */}
               <button
                 type="button"
                 onClick={handleBellClick}
-                className={`py-3 px-5 rounded-xl border font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                  agendadoExitoso
+                className={`w-14 h-14 rounded-2xl border transition-all flex items-center justify-center active:scale-95 ${
+                  agendadoExitoso || copiedMsg
                     ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-lg shadow-amber-500/20 animate-pulse'
                     : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
                 }`}
-                title="Hacer clic para sonar campana y copiar formato para WhatsApp"
+                title="Sonar campana y copiar formato para WhatsApp"
+                aria-label="Sonar campana y copiar formato para WhatsApp"
               >
-                {/* Campana SVG */}
                 <svg
-                  width="18"
-                  height="18"
+                  width="22"
+                  height="22"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className={agendadoExitoso ? 'animate-bounce' : ''}
+                  className={agendadoExitoso || copiedMsg ? 'animate-bounce' : ''}
                 >
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                   <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>
-                <span>{copiedMsg ? '¡Copiado para WhatsApp!' : 'Copiar Formato (Campana)'}</span>
               </button>
             </div>
           </form>
 
+          {/* Feedback Toast */}
+          {copiedMsg && (
+            <div className="mt-4 p-3 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs text-center font-bold animate-in fade-in">
+              ¡Formato copiado al portapapeles para WhatsApp!
+            </div>
+          )}
+
           {/* Success Box */}
-          {agendadoExitoso && (
-            <div className="mt-6 p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
+          {agendadoExitoso && !copiedMsg && (
+            <div className="mt-4 p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
                   ✓
                 </div>
-                <div>
-                  <p className="font-bold text-emerald-300">¡Cita agendada exitosamente!</p>
-                  <p className="text-emerald-400/80 mt-0.5">
-                    Registrada en Firestore y lista para sincronizarse en Google Calendar.
-                  </p>
-                </div>
+                <span className="font-bold text-emerald-300">¡Cita agendada exitosamente!</span>
               </div>
               <button
                 type="button"
                 onClick={handleBellClick}
-                className="px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-colors"
+                className="w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition-colors flex items-center justify-center"
+                title="Copiar para WhatsApp"
               >
-                Copiar WhatsApp
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
               </button>
             </div>
           )}
