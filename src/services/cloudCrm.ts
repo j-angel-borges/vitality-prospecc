@@ -252,3 +252,29 @@ export async function deleteCloudLead(leadId: string): Promise<void> {
   const docRef = fsDoc(firestoreDb, LEADS_COLLECTION, leadId);
   await fsDeleteDoc(docRef);
 }
+
+/**
+ * Guarda el orden completo de pestañas en Firestore crm_settings/config
+ */
+export async function saveCloudTabsOrder(tabs: string[]): Promise<void> {
+  const docRef = fsDoc(firestoreDb, SETTINGS_COLLECTION, SETTINGS_CONFIG_DOC);
+  await fsSetDoc(docRef, { sheetTabs: tabs, updatedAt: fsServerTimestamp() }, { merge: true });
+  try {
+    localStorage.setItem(LS_SHEET_TABS, JSON.stringify(tabs));
+  } catch (e) {}
+}
+
+/**
+ * Actualiza en lote múltiples leads en Firestore
+ */
+export async function batchUpdateCloudLeads(
+  updates: Array<{ id: string; changes: Partial<LeadData> }>
+): Promise<void> {
+  const { writeBatch } = await import('firebase/firestore');
+  const batch = writeBatch(firestoreDb);
+  for (const item of updates) {
+    const docRef = fsDoc(firestoreDb, LEADS_COLLECTION, item.id);
+    batch.set(docRef, { ...item.changes, updatedAt: fsServerTimestamp() }, { merge: true });
+  }
+  await batch.commit();
+}

@@ -284,6 +284,14 @@ const clients = [
   }
 ];
 
+function normalizePeruPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 8) {
+    return `9${digits}`;
+  }
+  return digits;
+}
+
 async function seed() {
   console.log('--- Iniciando registro de Clientes en Firestore ---');
 
@@ -313,6 +321,7 @@ async function seed() {
     // Asignación de salesRep según código de emprendedor
     const isJoseAngel = c.emprendedores.includes('BORJ0067');
     const salesRep = isJoseAngel ? 'Jose Angel' : 'Ricfel';
+    const normalizedPhone = normalizePeruPhone(c.telefono_movil);
 
     const leadPayload = {
       id: leadId,
@@ -324,7 +333,7 @@ async function seed() {
       respuestaCondicional: '',
       interesSolucion: 'Sí',
       nombreMadre: `${c.nombre} ${c.apellido}`.trim(),
-      celular: c.telefono_movil,
+      celular: normalizedPhone,
       distrito: c.distrito,
       observaciones: `Cliente Hy Cite N° ${c.numero_cliente} (${c.direccion})`,
       gestCall: 'll',
@@ -346,7 +355,7 @@ async function seed() {
         numeroCliente: c.numero_cliente,
         nombre: c.nombre,
         apellido: c.apellido,
-        telefonoMovil: c.telefono_movil,
+        telefonoMovil: normalizedPhone,
         emprendedores: c.emprendedores,
         provincia: c.provincia,
         distrito: c.distrito,

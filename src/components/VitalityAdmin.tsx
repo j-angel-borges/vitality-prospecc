@@ -12,12 +12,16 @@ import {
   addCloudCallLog,
   deleteCloudCallLog,
   clearCloudNCLogs,
-  deleteCloudLead
+  deleteCloudLead,
+  saveCloudTabsOrder,
+  batchUpdateCloudLeads
 } from '@/services/cloudCrm';
 import { TickToolModal } from './TickToolModal';
 import { VitalityCalendarView } from './VitalityCalendarView';
 import { ClientFichaModal } from './ClientFichaModal';
 import { InstallAppButton } from './InstallAppButton';
+import { PortalModal } from './PortalModal';
+import { LoginGatekeeperModal } from './LoginGatekeeperModal';
 import {
   CrmUserProfile,
   loginWithGoogle,
@@ -592,7 +596,20 @@ const GestCallCell: React.FC<GestCallCellProps> = ({
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
       <select
         value={selectedCode}
-        onChange={(e) => setSelectedCode(e.target.value)}
+        onChange={async (e) => {
+          const newCode = e.target.value;
+          setSelectedCode(newCode);
+          setIsSaving(true);
+          try {
+            await onConfirmCode(newCode);
+            setJustSaved(true);
+            setTimeout(() => setJustSaved(false), 1600);
+          } catch (err) {
+            console.error('Error auto-guardando gestión call:', err);
+          } finally {
+            setIsSaving(false);
+          }
+        }}
         style={{
           flex: 1,
           padding: '4px 6px',
@@ -1411,10 +1428,10 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   const [authErrorModal, setAuthErrorModal] = useState<{ code: string; message: string } | null>(null);
 
   // Login con Google
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (advisorName?: string) => {
     setIsAuthLoading(true);
     try {
-      const { user, profile, accessToken } = await loginWithGoogle();
+      const { user, profile, accessToken } = await loginWithGoogle(advisorName);
       setCurrentUser(user);
       setUserProfile(profile);
       if (profile?.role === 'superadmin') {
@@ -1438,6 +1455,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
       const code = e?.code || 'auth/unknown';
       const msg = e?.message || 'Error desconocido al conectar con Google.';
       setAuthErrorModal({ code, message: msg });
+      throw e;
     } finally {
       setIsAuthLoading(false);
     }
@@ -1503,6 +1521,20 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     }
   });
   const [showRepModal, setShowRepModal] = useState<boolean>(false);
+  const [isPortalOpen, setIsPortalOpen] = useState<boolean>(false);
+
+  // Rol estricto para acceso al Portal: solo Ricfel, Jose Angel y SuperAdmin
+  const isPortalAuthorized = Boolean(
+    userProfile?.role === 'superadmin' ||
+    selectedRep === 'Ricfel' ||
+    selectedRep === 'Jose Angel' ||
+    userProfile?.assignedRepName === 'Ricfel' ||
+    userProfile?.assignedRepName === 'Jose Angel' ||
+    currentUser?.email?.toLowerCase().includes('r.olaizola') ||
+    currentUser?.email?.toLowerCase().includes('ricfel') ||
+    currentUser?.email?.toLowerCase().includes('jangelborges') ||
+    currentUser?.email === 'mipropiadinastia@gmail.com'
+  );
 
   const handleSelectRep = (rep: AdminRep) => {
     setSelectedRep(rep);
@@ -1805,6 +1837,11 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     const target = leads.find(l => l.id === leadId);
     if (!target) return;
 
+    if (!code) {
+      await handleSaveField(leadId, 'gestCall', '');
+      return;
+    }
+
     const shortDatetime = formatShortDate();
     const opt = CALL_STATUS_OPTIONS.find(o => o.code === code);
     const label = opt?.label || code;
@@ -1940,18 +1977,19 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
     });
   }, [sheetTabs, selectedRep, leadCategoryView]);
 
-  // Leads filtrados por Encargado seleccionado
+  // Leads filtrados por Encargado seleccionado (estricto por pestañas visibles asignadas)
   const repLeads = React.useMemo(() => {
     return categoryLeads.filter(lead => {
+      const tab = getLeadSheetTab(lead);
       if (selectedRep === 'Ricfel') {
-        return lead.salesRep === 'Ricfel' || getLeadSheetTab(lead) === 'Mod Avcn (R)' || getLeadSheetTab(lead) === 'Clientes';
+        return visibleTabs.includes(tab);
       }
       if (selectedRep === 'Jose Angel') {
-        return lead.salesRep !== 'Ricfel' && getLeadSheetTab(lead) !== 'Mod Avcn (R)' && getLeadSheetTab(lead) !== 'Clientes';
+        return visibleTabs.includes(tab);
       }
       return true;
     });
-  }, [categoryLeads, selectedRep]);
+  }, [categoryLeads, selectedRep, visibleTabs]);
 
   // Valores únicos para filtros de columna (calculados sobre los leads de la pestaña activa o todos)
   const uniqueDistritos = React.useMemo(() => {
@@ -2109,23 +2147,36 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
   ];
 
   const collapsedCount = Object.values(collapsedCols).filter(Boolean).length;
+  const isAuthGateActive = !currentUser || !userProfile;
 
   return (
-    <div
-      className="admin-panel-container"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        width: '100vw',
-        height: '100vh',
-        background: isDark ? '#0B0F19' : '#F1F5F9',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease'
-      }}
-    >
+    <>
+      <LoginGatekeeperModal
+        isOpen={isAuthGateActive}
+        isAuthLoading={isAuthLoading}
+        onLoginWithGoogle={handleGoogleLogin}
+        isDark={isDark}
+      />
+
+      <div
+        className="admin-panel-container"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          width: '100vw',
+          height: '100vh',
+          background: isDark ? '#0B0F19' : '#F1F5F9',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          boxSizing: 'border-box',
+          transition: 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease, filter 0.3s ease',
+          filter: isAuthGateActive ? 'blur(12px)' : 'none',
+          pointerEvents: isAuthGateActive ? 'none' : 'auto',
+          userSelect: isAuthGateActive ? 'none' : 'auto',
+          opacity: isAuthGateActive ? 0.35 : 1
+        }}
+      >
       {/* ── Top Fixed Header & Toolbar ────────────────────────────────────── */}
       <div style={{ padding: '12px 16px 0 16px', flexShrink: 0 }}>
         {/* ── Header Row ────────────────────────────────────────────────────── */}
@@ -2316,6 +2367,31 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* View mode toggle: 3 Full-Screen Views */}
           <div style={{ display: 'flex', background: isDark ? '#1E293B' : '#E2E8F0', padding: '2px', borderRadius: '8px', gap: '2px', border: isDark ? '1px solid #334155' : 'none', transition: 'all 0.25s ease' }}>
+            {isPortalAuthorized && (
+              <button
+                type="button"
+                onClick={() => setIsPortalOpen(true)}
+                style={{
+                  border: isDark ? '1px solid rgba(124, 58, 237, 0.4)' : '1px solid #C4B5FD',
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  background: isDark ? 'rgba(124, 58, 237, 0.22)' : '#EDE9FE',
+                  color: isDark ? '#C4B5FD' : '#7C3AED',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: '0 1px 2px rgba(124, 58, 237, 0.15)',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Portal de administración de usuarios y leads"
+              >
+                <span>⚡</span>
+                <span>Portal</span>
+              </button>
+            )}
             <button
               onClick={() => setViewMode('spreadsheet')}
               style={{
@@ -2335,7 +2411,7 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
               }}
             >
               <Icons.Table />
-              <span>Spreadsheet</span>
+              <span>Spread</span>
             </button>
             <button
               onClick={() => setViewMode('crm')}
@@ -3927,5 +4003,40 @@ export const VitalityAdmin: React.FC<Props> = ({ leads, onClose, onUpdateLead, o
         </div>
       )}
     </div>
+
+    {/* Modal de Portal Administrativo (Roles, Traspasos & Reordenamiento) */}
+    <PortalModal
+      isOpen={isPortalOpen}
+      onClose={() => setIsPortalOpen(false)}
+      currentUser={currentUser}
+      userProfile={userProfile}
+      sheetTabs={sheetTabs}
+      leads={leads}
+      selectedRep={selectedRep}
+      onSelectRep={handleSelectRep}
+      onSelectTab={(tab) => setActiveTab(tab)}
+      onUpdateTabs={async (newTabs) => {
+        await saveCloudTabsOrder(newTabs);
+        setSheetTabs(newTabs);
+      }}
+      onBatchUpdateLeads={async (updates) => {
+        await batchUpdateCloudLeads(updates);
+        setLocalEdits(prev => {
+          const next = { ...prev };
+          updates.forEach(u => {
+            next[u.id] = { ...(next[u.id] || {}), ...u.changes };
+          });
+          return next;
+        });
+        updates.forEach(u => {
+          const target = leads.find(l => l.id === u.id);
+          if (target) {
+            onUpdateLead({ ...target, ...u.changes });
+          }
+        });
+      }}
+      isDark={isDark}
+    />
+  </>
   );
 };

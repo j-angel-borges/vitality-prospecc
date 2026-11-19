@@ -73,7 +73,7 @@ export const setStoredAccessToken = (token: string | null) => {
 /**
  * Iniciar sesión con Google OAuth solicitando permisos de Contactos y Calendario
  */
-export async function loginWithGoogle(): Promise<{ user: User; profile: CrmUserProfile; accessToken?: string }> {
+export async function loginWithGoogle(customAdvisorName?: string): Promise<{ user: User; profile: CrmUserProfile; accessToken?: string }> {
   // Siempre crear un provider fresco con prompt consent
   const provider = createGoogleProvider();
   const result = await signInWithPopup(auth, provider);
@@ -98,12 +98,13 @@ export async function loginWithGoogle(): Promise<{ user: User; profile: CrmUserP
   // Clasificación de Asesores:
   // jangelborges@gmail.com -> Jose Angel
   // r.olaizola@gmail.com   -> Ricfel
-  const isJoseAngel = emailLower.includes('jangelborges');
-  const isRicfel = emailLower.includes('r.olaizola') || emailLower.includes('ricfel');
+  const isJoseAngel = emailLower.includes('jangelborges') || (customAdvisorName ? /jose|angel/i.test(customAdvisorName) : false);
+  const isRicfel = emailLower.includes('r.olaizola') || emailLower.includes('ricfel') || (customAdvisorName ? /ricfel/i.test(customAdvisorName) : false);
 
+  const cleanCustom = (customAdvisorName || '').trim();
   const assignedRep = isSuperAdminEmail
     ? 'ALL'
-    : (isRicfel ? 'Ricfel' : 'Jose Angel');
+    : (isRicfel ? 'Ricfel' : (isJoseAngel ? 'Jose Angel' : (cleanCustom || 'Jose Angel')));
 
   const assignedRole: UserRole = isSuperAdminEmail ? 'superadmin' : 'sales_rep';
 
@@ -115,6 +116,11 @@ export async function loginWithGoogle(): Promise<{ user: User; profile: CrmUserP
     if (profile.role !== assignedRole) {
       profile.role = assignedRole;
       updates.role = assignedRole;
+      needsUpdate = true;
+    }
+    if (cleanCustom && profile.displayName !== cleanCustom) {
+      profile.displayName = cleanCustom;
+      updates.displayName = cleanCustom;
       needsUpdate = true;
     }
     if (profile.assignedRepName !== assignedRep) {
@@ -131,9 +137,11 @@ export async function loginWithGoogle(): Promise<{ user: User; profile: CrmUserP
     profile = {
       uid: user.uid,
       email: user.email || '',
-      displayName: isSuperAdminEmail 
-        ? 'Super Admin (Dinastía)' 
-        : (isJoseAngel ? 'José Angel (Asesor)' : (isRicfel ? 'Ricfel (Asesora)' : (user.displayName || 'Asesor Comercial'))),
+      displayName: cleanCustom 
+        ? cleanCustom 
+        : (isSuperAdminEmail 
+          ? 'Super Admin (Dinastía)' 
+          : (isJoseAngel ? 'José Angel (Asesor)' : (isRicfel ? 'Ricfel (Asesora)' : (user.displayName || 'Asesor Comercial')))),
       photoURL: user.photoURL || undefined,
       role: assignedRole,
       assignedRepName: assignedRep,
@@ -195,5 +203,28 @@ export async function getUserProfile(uid: string, email?: string | null): Promis
   } catch (e) {
     console.warn('Error obteniendo perfil de usuario:', e);
     return null;
+  }
+}
+
+/**
+ * Actualiza el perfil de un usuario en Firestore
+ */
+export async function updateUserProfile(uid: string, updates: Partial<CrmUserProfile>): Promise<void> {
+  const userDocRef = doc(db, 'crm_users', uid);
+  await setDoc(userDocRef, { ...updates, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+/**
+ * Obtiene la lista completa de usuarios registrados en el CRM
+ */
+export async function getAllCrmUsers(): Promise<CrmUserProfile[]> {
+  try {
+    const { collection, getDocs } = await import('firebase/firestore');
+    const colRef = collection(db, 'crm_users');
+    const snap = await getDocs(colRef);
+    return snap.docs.map(d => d.data() as CrmUserProfile);
+  } catch (e) {
+    console.warn('Error leyendo crm_users:', e);
+    return [];
   }
 }

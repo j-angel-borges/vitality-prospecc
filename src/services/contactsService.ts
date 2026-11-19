@@ -22,6 +22,9 @@ const LS_CONTACTS_TIMESTAMP = 'vitality_google_contacts_timestamp_v1';
 export function normalizePhone(phone?: string | null): string {
   if (!phone) return '';
   const digits = phone.replace(/\D/g, '');
+  if (digits.length === 8) {
+    return `9${digits}`;
+  }
   if (digits.length >= 9) {
     return digits.slice(-9);
   }

@@ -103,7 +103,9 @@ export function normalizePeruPhone(rawPhone?: string): {
   }
 
   let localNine = digits;
-  if (digits.startsWith('51') && digits.length === 11) {
+  if (digits.length === 8) {
+    localNine = `9${digits}`;
+  } else if (digits.startsWith('51') && digits.length === 11) {
     localNine = digits.slice(2);
   } else if (digits.length > 9 && digits.endsWith(digits.slice(-9)) && digits.slice(-9).startsWith('9')) {
     localNine = digits.slice(-9);
